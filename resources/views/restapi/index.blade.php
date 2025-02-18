@@ -7,126 +7,17 @@
 
     <style>
         /* Additional styles */
-        .sidebar {
-            background-color: #FFFFFF;
-            width: 245px;
+
+        .custom-button:hover {
+            background-color: #007BFF !important; /* Warna latar belakang saat hover */
         }
 
-        .content {
-            min-height: 400px;
-            background-color: #FFFFFF;
-            padding: 20px;
-        }
-
-
-        /* NAV LINK */
-        .nav-link {
-            display: flex;
-            align-items: center;
+        .custom-button:hover a {
+            color: white !important; /* Warna teks saat hover */
         }
 
         .nav-link:hover {
             color: blue !important;
-        }
-
-        .nav-link .icon {
-            margin-right: 5px;
-        }
-
-        .custom-button {
-            color: #A0A0A0;
-            /* Warna teks saat tombol normal */
-            transition: background-color 0.3s, color 0.3s;
-            /* Efek transisi ketika hover */
-            /* outline: none; */
-        }
-
-        .custom-button:hover {
-            background-color: #007BFF;
-            /* Warna latar belakang saat tombol dihover */
-            color: white;
-            /* Warna teks saat tombol dihover menjadi putih */
-        }
-
-        .custom-card {
-            padding: 30px;
-            width: 395px;
-            height: 280px;
-            background-color: #FFFFFF;
-            border-radius: 20px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .circle-image {
-            width: 79px;
-            height: 79px;
-            border-radius: 50%;
-        }
-
-        .custom-title {
-            font-weight: 600;
-            font-size: 25px;
-            color: #252525;
-            font-family: 'Poppins', sans-serif;
-            margin-top: 10px;
-        }
-
-        .custom-subtitle {
-            font-weight: 400;
-            font-size: 20px;
-            color: #898989;
-            font-family: 'Poppins', sans-serif;
-            margin-top: 10px;
-        }
-
-        .custom-button {
-            width: 335px;
-            height: 43px;
-            border-radius: 10px;
-            background-color: #EAEAEA;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 15px;
-            outline: none;
-        }
-
-        .custom-button-detail {
-            width: 180px;
-            height: 45px;
-            border-radius: 10px;
-            background-color: #EAEAEA;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 15px;
-            margin-left: auto;
-            color: #A0A0A0;
-            /* Warna teks saat tombol normal */
-            transition: background-color 0.3s, color 0.3s;
-            /* Efek transisi ketika hover */
-        }
-
-        .custom-button-detail:hover {
-            background-color: #007BFF;
-            /* Warna latar belakang saat tombol dihover */
-            color: white;
-            /* Warna teks saat tombol dihover menjadi putih */
-        }
-
-        .button-text {
-            font-weight: 500;
-            font-size: 15px;
-            font-family: 'Poppins', sans-serif;
-            margin: 0;
-            margin-left: 10px;
-            margin-right: 10px;
-            text-decoration: none;
-            color: #A0A0A0;
-        }
-        .button-text:hover{
-            text-decoration: none;
-            color: #fff;
         }
 
         .text {
@@ -137,6 +28,50 @@
         .sidebar-right-shadow {
             box-shadow: 1px 0px 8px rgba(0, 0, 0, 0.1);
             /* Menambahkan bayangan ke sisi kanan */
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #fff;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            border-radius: 5px;
+            overflow: hidden;
+            transition: 0.3s;
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            transition: 0.3s;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .dropdown.active .dropdown-content {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
         }
 
     </style>
@@ -170,11 +105,8 @@
                 <div class="mx-auto">
                     <ul class="navbar-nav mb-2 mb-lg-0 justify-content-center">
                         <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/dashboard-student">Dashboard Student</a>
+                        <a class="nav-link active flex items-center" aria-current="page" href="/dashboard-student">Dashboard Student</a>
                         </li>
-                        <!-- <li class="nav-item">
-                            <a class="nav-link active" aria-current="page" href="#">Learning</a>
-                        </li> -->
                     </ul>
                 </div>
                 <div class="dropdown">
@@ -190,7 +122,6 @@
                     </div>
                 </p>
                 </div>
-                <!-- <button class="btn btn-primary custom-button-sign-up" onclick="window.location.href='register.html'">Sign Up</button> -->
             </div>
         </div>
     </nav>
@@ -199,7 +130,7 @@
     <div class="container-fluid">
         <div class="row">
             <!-- SIDEBAR -->
-            <nav class="col-md-2 d-none d-md-block sidebar sidebar-right-shadow">
+            <nav class="col-md-2 d-none d-md-block sidebar sidebar-right-shadow" style="background-color: #FFFFFF; width: 245px;">
                 <div class="sidebar-sticky" style="margin-top: 20px;">
                     <ul class="nav flex-column flex-">
                         <li class="nav-item" style="margin-bottom: 30px;">
@@ -222,36 +153,6 @@
                                 </div>
                             </div>
                         </li>
-                        {{-- <li class="nav-item">
-                            <div class="row align-items-start">
-                                <div class="col-2">
-                                    <i class="fas fa-check-circle" style="margin-top: 12px; margin-left: 15px; color: #676767;" id="validationIcon"></i>
-                                </div> -->
-                                <div class="col">
-                                    <a class="nav-link" href="#" onclick="showContent('validation')" style="color: #34364A;" id="validationLink">Validation Result</a>
-                                </div>
-                            </div>
-                        </li>
-                        <li class="nav-item">
-                            <div class="row align-items-start">
-                                <div class="col-2">
-                                    <i class="fas fa-trophy" style="margin-top: 12px; margin-left: 15px; color: #676767;" id="rankIcon"></i>
-                                </div>
-                                <div class="col">
-                                    <a class="nav-link" href="#" onclick="showContent('rank')" style="color: #34364A;" id="rankLink">Top 20 Rank</a>
-                                </div>
-                            </div>
-                        </li>
-                        <li class="nav-item">
-                            <div class="row align-items-start">
-                                <div class="col-2">
-                                    <i class="fas fa-cog" style="margin-top: 12px; margin-left: 15px; color: #676767;" id="settingsIcon"></i>
-                                </div>
-                                <div class="col">
-                                    <a class="nav-link" href="#" onclick="showContent('settings')" style="color: #34364A;" id="settingsLink">Settings</a>
-                                </div>
-                            </div>
-                        </li> --}}
                     </ul>
                 </div>
             </nav>
@@ -259,7 +160,7 @@
            
             <!-- CONTENT -->
             <main class="col-md-9">
-                <div class="content" id="start-learning">
+                <div class="p-20 min-h-96 bg-white" id="start-learning" style="padding-bottom: 30px">
                     <p style="font-size: 24px; font-weight: 500; color: #34364A;">Start Learning</p>
                     <div>
                         <div class="container mt-4">
@@ -290,14 +191,18 @@
                                             <div class="p-3">{{ $topic->title }}</div>
                                             
                                         </div>
-                                        <div class="col" style="text-align: right;">
-                                            <div class="custom-button-detail">
-                                                <a class="button-text" data-toggle="modal" data-target="#exampleModal" onclick="materialModal('{{ $topic->id }}','{{ $topic->title }}','{{ $rows }}')">
+                                        <div class="col" style="text-align: right; margin-top: 0px">
+                                            <div class="d-flex justify-content-center align-items-center mt-3 pl-3 ms-auto custom-button"
+                                                 style="width: 180px; height: 45px; border-radius: 10px; background-color: #EAEAEA; transition: background-color 0.3s, color 0.3s;">
+                                                <a class="d-flex align-items-center text-muted text-decoration-none p-2 w-100 text-center" 
+                                                   data-toggle="modal" data-target="#exampleModal" 
+                                                   onclick="materialModal('{{ $topic->id }}','{{ $topic->title }}','{{ $rows }}')">
                                                     <i class="fas fa-key" style="margin-right: 5px;"></i> <!-- Ikon kunci -->
                                                     Material Details
                                                 </a>
                                             </div>
-                                        </div>
+                                        </div>                                        
+                                        
                                     </div>
                                     @endforeach
                                 </div>
@@ -309,60 +214,15 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- <div id="validation" class="content" style="display: none;">
-                    <h1>Validation Result</h1>
-                    <p>This is the products content.</p>
-                </div>
-
-                <div id="rank" class="content" style="display: none;">
-                    <h1>Top 20 Rank</h1>
-                    <p>This is the orders content.</p>
-                </div>
-
-                <div id="settings" class="content" style="display: none;">
-                    <h1>Settings</h1>
-                    <p>Possible account settings
-                        needed<br>during the learning process</p>
-
-                    <div class="container">
-                        <div class="row">
-                            <div class="col">
-                                <div class="custom-card">
-                                    <img src="./images/profile.png" alt="Image 1" class="circle-image">
-                                    <h2 class="custom-title">My Profile</h2>
-                                    <p class="custom-subtitle">Ubah data diri kamu</p>
-                                    {{-- <button type="button" class="btn btn-primary custom-button"><p class="button-text">Edit Now</p></button> --}}
-                                    <div class="custom-button">
-                                        <p class="button-text">Edit Now</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="custom-card">
-                                    <img src="./images/my-password.png" alt="Image 2" class="circle-image">
-                                    <h2 class="custom-title">My Password</h2>
-                                    <p class="custom-subtitle">Ganti kata sandimu</p>
-                                    <div class="custom-button">
-                                        <p class="button-text">Change Now</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div> -->
             </main>
 
 
         </div>
     </div>
+    
  <!-- The Modal -->
-            <div class="modal fade" id="exampleModal" 
-                                    tabindex="-1" 
-                                    role="dialog" 
-                                    aria-labelledby="exampleModalLabel" 
-                                    aria-hidden="true">
-            <div class="modal-dialog" role="document" style="max-width: 80%;" role="document">
+    <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document" style="max-width: 80%;" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                 <h5 class="modal-title" id="exampleModalLabel"><span id="span_title"></span></h5>
@@ -386,10 +246,8 @@
                             <div class="col-md-7">
                                 <b>Prerequisite knowledge : </b>
                                 <div class="text-sm" style="margin-bottom: 20px">
-                                    <p style="margin-bottom: 5px !important">Before starting to learn PHP, you should have basic knowledge of <b>HTML, CSS, and JavaScript</b>.</p>
-                                    1. HTML is used to design static web pages.<br>
-                                    2. CSS helps make web page content more effective and attractive.<br />
-                                    3. JavaScript is used to design interactive websites..
+                                    <p style="margin-bottom: 5px !important">Before starting to learn this material, you should have basic knowledge of <b>PHP</b>.</p>
+                                    PHP functions are used to process data, manage strings, arrays, numbers, and interact with the server.
                                 </div>
 
                                 <b>Requirement : </b>
@@ -409,13 +267,13 @@
                                         <br>
                                         VISUAL STUDIO CODE
                                     </div>
-                                    <div class="col-md-6 text-center text-sm">
+                                    {{-- <div class="col-md-6 text-center text-sm">
                                         <a href="https://www.apachefriends.org/" target="_blank">
                                             <img style="width: 90px; height: 80px; object-fit: cover" src="{{asset("./images/php/xampp.png")}}" alt="">
                                         </a>
                                         <br>
                                         XAMPP
-                                    </div>
+                                    </div> --}}
                                     
                                 </div>
                             </div>
@@ -429,6 +287,7 @@
                 </div>
                 </div>
             </div>
+
     <!-- JavaScript untuk mengubah konten tab -->
     <script>
         function materialModal(id,title,controller){
@@ -443,24 +302,7 @@
             let id = $("#id").val();
             let title = $("#title").val();
             let controller = $("#controller").val();
-            window.location.href = "{{ route('php_material_detail') }}?phpid="+id+"&start="+controller;
-            
-            /*$.ajax({
-                type: "POST",
-                data: {
-                    id: id,
-                    title: title,
-                    _token: csrfToken // Menambahkan token CSRF ke dalam data permintaan
-                },
-                dataType: 'html',
-                url: "{{ route('php_material_detail') }}",
-                success: function(res) {
-                    
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error:", error);
-                }
-            });*/
+            window.location.href = "{{ route('restapi_topic_detail') }}?id=" + encodeURIComponent(id);
         }
 
         // Fungsi untuk mengubah warna ikon, teks, dan link menjadi biru
@@ -541,7 +383,7 @@
             });
         });
     </script>
-     <script>
+    <script>
         $(document).ready(function() {
             $("#dropdownContainer").click(function() {
                 $("#dropdownContainer").toggleClass("active");
@@ -553,50 +395,9 @@
                 $("#dropdownContainer").removeClass("active");
             });
         });
-        </script>
-    
-    
-        <style>
-        .dropdown {
-            position: relative;
-            display: inline-block;
-            cursor: pointer;
-        }
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: #fff;
-            min-width: 160px;
-            box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
-            z-index: 1;
-            border-radius: 5px;
-            overflow: hidden;
-            transition: 0.3s;
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        .dropdown-content a {
-            color: black;
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-            transition: 0.3s;
-        }
-        .dropdown-content a:hover {
-            background-color: #f1f1f1;
-        }
-        .dropdown:hover .dropdown-content {
-            display: block;
-            opacity: 1;
-            transform: translateY(0);
-        }
-        .dropdown.active .dropdown-content {
-        display: block;
-        opacity: 1;
-        transform: translateY(0);
-        }
-    
-    </style>
+    </script>
+
+    <!-- Footer -->
     <footer class="footer" style="background-color: #EAEAEA; color: #636363; text-align: center; padding: 10px 0; position: relative; bottom: 0; width: 100%;">
         © 2023 Your Website. All rights reserved.
     </footer>

@@ -8,7 +8,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <link href="style.css" rel="stylesheet">
+    {{-- <link href="style.css" rel="stylesheet"> --}}
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -27,26 +27,12 @@
             color: #3F3F46;
         }
 
-        .footer {
-            background-color: #EAEAEA;
-            color: #636363;
-            text-align: center;
-            padding: 10px 0;
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-        }
-
         /* CSS untuk mengatur sidebar */
         .sidebar {
-            width: 250px;
-            background-color: #ffffff;
-            height: 100%;
             position: fixed;
             top: 0;
             right: 0;
             overflow-x: hidden;
-            padding-top: 20px;
         }
 
         /* Gaya dropdown */
@@ -178,119 +164,39 @@
             <img src="{{ asset('images/left-arrow.png') }}" style="height: 24px; margin-right: 10px;">
             {{ $row->title; }}
         </a>
-    </nav>
-
-     <!-- Sidebar -->
-   
-    
+    </nav> 
 
     <!-- Sidebar -->
-    <div id="sidebar" class="sidebar" style="border-left: 1px solid #E4E4E7; padding: 20px; width: 100%; max-width: 400px;">
-        <p class="text-list" style="font-size: 18px; font-weight: 600; font-size: 20px"><img src="{{ asset('images/right.png') }}" style="height: 24px; margin-right: 10px; border:1px solid; border-radius:50%"> Task List</p>
-        <div class="progress-container">
+    <div id="sidebar" class="sidebar bg-white" style="width: 250px; border-left: 1px solid #E4E4E7; padding: 20px; width: 100%; max-width: 400px; height: 100%;">
+        <div style="display: flex;">
+            <img src="{{ asset('images/right.png') }}" style="height: 24px; margin-right: 10px; margin-top: 3px; border:1px solid; border-radius:50%">
+            <p class="text-list" style="font-size: 20px; font-weight: 600;">
+                Task List
+            </p>
+        </div>        
+
+        {{-- <div class="progress-container">
             <div id="progressbar"></div>
-            
         </div>
-        <div id="progress">0%</div>
+        
+        <div id="progress">0%</div> --}}
+
+        <div class="progress-container">
+            <div id="progressbar" style="width: {{ session('progress', 0) }}%;"></div>
+        </div>
+        <div id="progress">{{ session('progress', 0) }}%</div>
+        
         <ul class="list">
             @foreach($topics as $topic)
-            @php
-                /*$results = DB::select("select * from php_topics where id = ?", [$topic->id]);
-                if (!empty($results)) {
-                    $result = $results[0]; 
-                    $result->id; 
-                } else {
-                    echo "No results found.";
-                }*/
-                if($topic->id == $_GET['phpid'] ){
-                    $display = "display:block !important";
-                    $transform = "transform: rotate(180deg); !important";
-                }else{
-                    $display = "";
-                    $transform = "";
-                }
-            @endphp
-            <li class="list-item" onclick="toggleItem(this)">
-                <img class="list-item-icon" src="{{ asset('images/down-arrow.png') }}" style="height: 24px; @php echo $transform; @endphp">
-                <span class="list-item-title">{{ $topic->title }}   </span>
-            </li>
-            
-            <div class="expandable-content" style="@php echo $display; @endphp">
-            
-                <div style="display: flex; flex-direction: column; align-items: left;">
-                    @php
-                
-                        
-                        $row = DB::table('php_topics')
-                        ->leftJoin('php_topics_detail', 'php_topics.id', '=', 'php_topics_detail.id_topics')
-                        ->select('*')
-                        ->where('php_topics_detail.id_topics', '=',   $topic->id ) 
-                        ->get();
-                        $no = 1;
-                    @endphp
-                    @foreach($row as $r)
-                    @php
-                    $no++;
-                    $count_ = ($no/$detailCount)*10;
-                        $phpdid = isset($_GET['start']) ? $_GET['start'] : '';
-                        if($r->id == $phpdid and $r->id_topics == $_GET['phpid']){
-                            $active = 'color:#000; font-weight:bold; text-decoration: underline;';
-
-                        }else{
-                            $active = '';
-                        }
-                    @endphp 
-                    <div class="row">
-                        <div class="col-sm-1">
-                            <label class="radio-label">
-                                <svg width="16" height="16" class="" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M15.9993 2.6665C8.63555 2.6665 2.66602 8.63604 2.66602 15.9998C2.66602 23.3636 8.63555 29.3332 15.9993 29.3332C23.3631 29.3332 29.3327 23.3636 29.3327 15.9998C29.3327 8.63604 23.3631 2.6665 15.9993 2.6665ZM5.33268 15.9998C5.33268 10.1088 10.1083 5.33317 15.9993 5.33317C21.8904 5.33317 26.666 10.1088 26.666 15.9998C26.666 21.8909 21.8904 26.6665 15.9993 26.6665C10.1083 26.6665 5.33268 21.8909 5.33268 15.9998Z" fill="#71717A"></path>
-                                </svg>
-                            </label>
-                        </div>
-                        <div class="col" style="padding-bottom: 1rem;">
-                            <a class="text" style="{{ $active }};" href="{{ route('php_material_detail') }}?phpid={{$topic->id}}&start={{$r->id}}" id="requirement" onclick="updateProgress(@php echo $count_ @endphp)">{{ $r->title }} </a> 
-                        </div>
-                    </div>
-                    @endforeach
-                    @php
-                    $top = $topic->id;
-                    $task = DB::table('php_task')->where('id_topics', $top)->first(); // Menggunakan first() untuk mengambil satu baris pertama
-                    
-                
-                    @endphp
-                    
-                    @if($task)
-                    @php
-                    $tsk = $task->id;
-                    $task_get = isset($_GET['task']) ? $_GET['task'] : '';
-                    if($tsk == $task_get){
-                        $active_task = 'color:#000; font-weight:bold; text-decoration: underline;';
-
-                    }else{
-                        $active_task = '';
-                    }
-                    
-                    @endphp
-                    <div class="row">
-                        <div class="col-sm-1">
-                            <label class="radio-label">
-                                <svg width="16" height="16" class="" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M15.9993 2.6665C8.63555 2.6665 2.66602 8.63604 2.66602 15.9998C2.66602 23.3636 8.63555 29.3332 15.9993 29.3332C23.3631 29.3332 29.3327 23.3636 29.3327 15.9998C29.3327 8.63604 23.3631 2.6665 15.9993 2.6665ZM5.33268 15.9998C5.33268 10.1088 10.1083 5.33317 15.9993 5.33317C21.8904 5.33317 26.666 10.1088 26.666 15.9998C26.666 21.8909 21.8904 26.6665 15.9993 26.6665C10.1083 26.6665 5.33268 21.8909 5.33268 15.9998Z" fill="#71717A"></path>
-                                </svg>
-                            </label>
-                        </div>
-                        <div class="col" style="padding-bottom: 1rem;">
-                            
-                            <a class="text" onclick="updateProgress(@php echo $count_ @endphp)" style="{{ $active_task }}" href="{{ route('send_task') }}?phpid={{$topic->id}}&task={{$task->id}}" id="requirement" >{{ $task->task_name }} </a>
-                        </div>
-                    </div>        
-                    @endif
-                </div>
-
-            </div>
+                <li class="list-item">
+                    <a href="{{ route('restapi_topic_detail', ['id' => $topic->id]) }}" 
+                       class="list-item-title">
+                        {{ $topic->title }}
+                    </a>
+                </li>
             @endforeach
         </ul>
+        
     </div>
     <div class="form-group row">
 
@@ -300,15 +206,11 @@
         <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px;margin-bottom:40px">
             @php
                 if($pdf_reader == 0):
-                echo $html_start;
-            @endphp
-                    
-                    
-            @php
-                else:
+                // echo $html_start;
+                // dd($result->file_path);
             @endphp
             
-            <iframe src="{{ asset('php/document/A1_BASIC_PHP/'. $html_start ) }}" style="width: 100%; height: 510px"></iframe></iframe>
+            <iframe src="{{ asset($result->file_path) }}" style="width: 100%; height: 510px"></iframe></iframe>
             @php
                 endif;
             @endphp
@@ -316,7 +218,7 @@
         </div>
     </div>
 
-    @if($role == 'teacher')
+    @if($user->role == 'teacher')
     <div style="padding: 20px; max-width: 68%; margin-left:5px;  ">
         <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px;margin-bottom:40px">
         <!-- <a href="{{ asset('/storage/private/febri syawaldi/febri syawaldi_db_conn.php') }}" download>Download File</a>
@@ -332,7 +234,7 @@
                         <!-- Add more table headers as needed -->
                     </tr>
                 </thead>
-                <tbody>
+                {{-- <tbody>
                     @foreach ($listTask as $item)
                         <tr>
                             <td>{{ $item->name }}</td>
@@ -341,7 +243,7 @@
                             <!-- Add more table cells as needed -->
                         </tr>
                     @endforeach
-                </tbody>
+                </tbody> --}}
             </table>
 
         </div>
@@ -350,7 +252,7 @@
         
     @endif
     
-    @if($flag == 1)
+    {{-- @if($flag == 1) --}}
 
     <div style="padding: 20px; max-width: 68%; margin-left:5px;  ">
         <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px;margin-bottom:40px">
@@ -362,44 +264,68 @@
                             text-decoration: none !important;
                         }
                     </style>    
-                    <form action="{{ Route("task_submission") }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ Route('restapi_submit_task') }}" method="POST" enctype="multipart/form-data">
                         {{ csrf_field() }}
-                        <input type="hidden" name="phpid" id="phpid" value="{{ $_GET['phpid'] }}">
-                        <input type="hidden" name="start" id="start" value="{{ $_GET['start'] }}">
-                        <div class="form-group" >
-                            <label for="">Evidence</label>
-                            <input type="file" name="file" class="form-control">
-                            <small>Enter the work results <code>.php | .html </code></small>
-                        </div>
-                        <br />
+                        
+                        {{-- ID Topik sebagai input hidden --}}
+                        <input type="hidden" name="id" value="{{ old('id', request()->query('id')) }}">
+                    
+                        {{-- Input untuk file --}}
                         <div class="form-group">
-                            <label for="">Comment</label>
-                            <textarea class="form-control" name="comment" placeholder="..."></textarea>
+                            <label for="file">Evidence</label>
+                            <input type="file" name="file" class="form-control" required>
+                            <small>Enter the work results <code>.php | .html</code> (Max: 2MB)</small>
                         </div>
+                    
                         <br />
+                    
+                        {{-- Input untuk komentar --}}
+                        <div class="form-group">
+                            <label for="comment">Comment</label>
+                            <textarea class="form-control" name="comment" placeholder="(Optional) Add a comment..."></textarea>
+                        </div>
+                    
+                        <br />
+                    
+                        {{-- Tombol Submit --}}
                         <div class="form-group">
                             <input type="submit" value="Upload" class="btn btn-primary">
                         </div>
-                        
-                        @if($output)
-                            <p>{!! $output !!}</p>
-                        @else
-                            <p>{!! $output !!}</p>
+                    
+                        {{-- Pesan sukses jika berhasil --}}
+                        @if (session('success'))
+                            <div class="alert alert-success mt-3">
+                                {{ session('success') }}
+                            </div>
                         @endif
+                    
+                        {{-- Tampilkan error jika ada masalah --}}
+                        @if ($errors->any())
+                            <div class="alert alert-danger mt-3">
+                                <ul>
+                                    @foreach ($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                        
+                        {{-- @if($output)
+                        <p>{!! $output !!}</p>
+                        @else
+                        <p>{!! $output !!}</p>
+                        @endif --}}
                     </form>
                 </div>
             </div>
         </div>
     </div>
-    @else
+    {{-- @else
         
-    @endif
-
-    
-
+    @endif --}}
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer class="text-center p-2 fixed-bottom" style="background-color: #EAEAEA; color: #636363; width: 100%;">
         © 2023 Your Website. All rights reserved.
     </footer>
     
@@ -415,7 +341,6 @@
             });
     </script>
     <script>
-        
         function toggleSidebar() {
             document.getElementById("sidebar").classList.toggle("active");
         }
@@ -441,47 +366,42 @@
                 });
             });
         });
-        function move() {
-            
-            var progressBar = document.getElementById("myProgressBar");
-            var progressText = document.getElementById("progressText");
-            var width = 0;
-            var interval = setInterval(frame, progress);
 
-            function frame() {
-            if (width >= progress) {
-                clearInterval(interval);
-            } else {
-                width++;
-                progressBar.style.width = width + "%";
-                progressText.innerHTML = width + "%";
-            }
-            }
-        }
-        move();
-        function updateProgress(params) {
-            // Get CSRF token from the meta tag
-        var csrfToken = $('meta[name="csrf-token"]').attr('content');
+        // Fungsi untuk mengupdate progress ke backend
+        function updateProgress(topicId) {
+            var csrfToken = $('meta[name="csrf-token"]').attr('content');
 
-        $.ajaxSetup({
-            headers: {
-                'X-CSRF-TOKEN': csrfToken
-            }
-        });
+            $.ajaxSetup({
+                headers: { 'X-CSRF-TOKEN': csrfToken }
+            });
+
             $.ajax({
                 type: "POST",
                 url: "{{ Route('session_progress') }}",
-                data: {params: params},
-                success: function(response) { 
-                    $('#progressbar').css('width', params + '%');
-                   
+                data: { topic_id: topicId },
+                success: function(response) {
+                    getProgress(); // Refresh progress setelah update
                 }
             });
         }
-        $('#progress').text("@php 
-                                $width = session('params');
-                                echo $width."%"; 
-                            @endphp");
+
+        // Fungsi untuk mengambil dan menampilkan progress dari backend
+        function getProgress() {
+            $.ajax({
+                type: "GET",
+                url: "{{ route('restapi_get_progress') }}",
+                success: function(response) {
+                    let progress = response.progress + "%";
+                    $('#progressbar').css('width', progress);
+                    $('#progress').text(progress);
+                }
+            });
+        }
+
+        // Panggil saat halaman dimuat untuk mendapatkan progres terbaru
+        $(document).ready(function() {
+            getProgress();
+        });
     </script>
 </body>
 

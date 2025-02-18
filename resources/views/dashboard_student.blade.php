@@ -45,7 +45,7 @@
                     <img src="{{ asset('./images/Group.png') }}" alt="Group" style="height: 50px; margin-right: 10px;">
                     <i class="fas fa-chevron-down" style="color: #0079FF;"></i>
                     <div class="dropdown-content" id="dropdownContent">
-                        <form id="logout-form" action="{{ route('logoutt') }}" method="POST">
+                        <form id="logout-form" action="{{ route('logout') }}" method="POST">
                             @csrf
                             <a href="/" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
                         </form>
@@ -283,7 +283,7 @@
                             <img src="{{asset("./images/book.png ")}}" style="width: 13px; height: 16px;">
                         </div>
                         <div class="col">
-                            <p>4 learning topics</p>
+                            <p>6 learning topics</p>
                         </div>
                     </div>
                     <div style="margin-top: auto;">
