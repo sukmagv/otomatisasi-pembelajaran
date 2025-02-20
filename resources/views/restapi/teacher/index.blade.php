@@ -254,7 +254,7 @@
                                                     <td>{{ $task->topic_id }}</td>
                                                     <td>{{ $task->title }}</td>
                                                     <td>{{ $task->order_number }}</td>
-                                                    <td>{{ $task->flag }}</td>
+                                                    <td>{{ $task->flag == 1 ? 'Yes' : 'No' }}</td>
                                                     <td class="text-center">
                                                         <!-- Tombol Edit -->
                                                         <button class="btn btn-warning btn-sm" 

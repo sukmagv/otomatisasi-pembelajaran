@@ -75,7 +75,7 @@ class TeacherController extends Controller
         if ($request->hasFile('file_path')) {
             $file = $request->file('file_path');
             $fileName = time() . '_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('public/restapi/tasks', $fileName);
+            $filePath = $file->storeAs('restapi/tasks', $fileName, 'public');
         }
         
         $data = [

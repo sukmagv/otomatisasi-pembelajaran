@@ -10,14 +10,15 @@ class Submission extends Model
 {
     use HasFactory;
 
-    protected $table = 'restapi_student_submits';
+    protected $table = 'restapi_student_submissions';
 
     protected $fillable = [
         'user_id',
-        'topic_id',
-        'submit_file_path',
+        'task_id',
+        'submit_path',
         'submit_comment',
-        'created_by',
+        'created_at',
+        'updated_at',
     ];
 
     public function topic()

@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <link href="style.css" rel="stylesheet">
+    {{-- <link href="style.css" rel="stylesheet"> --}}
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -287,7 +287,17 @@
                         </div>
                     </div>
                     <div style="margin-top: auto;">
-                        <a href="{{ route('restapi_welcome') }}" class="btn btn-primary">Start Learning</a>
+                        @if(Auth::check())
+                            @if(Auth::user()->role === 'student')
+                                <a href="{{ route('restapi_student') }}" class="btn btn-primary">Start Learning</a>
+                            @elseif(Auth::user()->role === 'teacher')
+                                <a href="{{ route('restapi_teacher') }}" class="btn btn-primary">Start Learning</a>
+                            @else
+                                <p class="text-danger">Unauthorized access</p>
+                            @endif
+                        @else
+                            <a href="{{ route('login') }}" class="btn btn-warning">Login First</a>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -368,7 +378,7 @@
     @endauth
 
 </body>
-    <script src="script.js"></script>
+    {{-- <script src="script.js"></script> --}}
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script>
     $(document).ready(function() {

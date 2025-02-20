@@ -9,6 +9,7 @@ use App\Models\RestApi\Topic;
 use App\Models\RestApi\Submission;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Models\RestApi\Task;
 use Illuminate\Support\Facades\Auth;
 
 class RestApiController extends Controller
@@ -33,25 +34,34 @@ class RestApiController extends Controller
 
         // Get ID from URL parameter
         $topic_id = (int) $request->query('id');
-        // $output = $request->query('output');
-
-        // Get data from database
-        $result = DB::table('restapi_topics')->where('id', $topic_id)->first();
-
-        $pdf_reader = !empty($result->file_name) ? 1 : 0;
-
+        
+        // Get topic details
+        $result = Topic::with('tasks')->findOrFail($topic_id);
+        
+        // Get all topics
         $topics = Topic::all();
-        $detail = Topic::findOrFail($topic_id);
-        $topicsCount = count($topics);
-        // $detailCount = ($topicsCount / $topicsCount) * 10;
 
-        return view('restapi.topic_detail', [
-            'row' => $detail,
+        // Get total topics count
+        $topicsCount = Topic::count();
+
+        $tasks = Task::all()->groupBy('topic_id');
+
+        // Search file in tasks table by ID topic
+        $taskWithFile = $result->tasks->firstWhere('file_path', '!=', null);
+
+        $pdf_reader = $taskWithFile ? 1 : 0;
+
+        $activeTask = $tasks[$topic_id]->firstWhere('id', $request->query('task_id')) ?? null;
+
+        return view('restapi.student.topic_detail', [
+            'row' => $result,
             'user' => $user,
             'topic_id' => $topic_id,
             'topics' => $topics,
-            'result' => $result,
+            'tasks' => $tasks,
+            'taskWithFile' => $taskWithFile,
             'pdf_reader' => $pdf_reader,
+            'activeTask' => $activeTask,
             'topicsCount' => $topicsCount,
             // 'output' => $output,
         ]);
@@ -64,19 +74,23 @@ class RestApiController extends Controller
         $request->validate([
             'file' => 'required|file|max:2048|extensions:php,html',
             'comment' => 'nullable|string',
-            'id' => 'required|exists:restapi_topics,id'
+            'id' => 'required|exists:restapi_topic_tasks,id'
         ]);
 
-        // Save submit file to storage/app/public/uploads/
-        $filePath = $request->file('file')->store('submissions', 'restapi', 'public');
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('restapi/submissions', $fileName, 'public');
+        }
 
         // Save submit data to database
         Submission::create([
             'user_id' => auth()->id(), // Get user ID
-            'topic_id' => (int) $request->id,
-            'submit_file_path' => $filePath,
+            'task_id' => (int) $request->id,
+            'submit_path' => $filePath,
             'submit_comment' => $request->comment,
-            'created_at' => Carbon::now()
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
         ]);
 
         // Update progress
@@ -91,16 +105,13 @@ class RestApiController extends Controller
         $userId = auth()->id();
 
         // Count all topics in database
-        $totalTopics = DB::table('restapi_topics')->count();
+        $totalTasks = Task::count();
 
         // Count all submit by user and topic
-        $submittedTopics = DB::table('restapi_student_submits')
-                            ->where('user_id', $userId)
-                            ->distinct()
-                            ->count('topic_id');
+        $submittedTask = Submission::where('user_id', $userId)->count();
 
         // Count progress presentation
-        $progress = ($totalTopics > 0) ? round(($submittedTopics / $totalTopics) * 100) : 0;
+        $progress = ($totalTasks > 0) ? round(($submittedTask / $totalTasks) * 100) : 0;
 
         // Save progress to session
         session(['progress' => $progress]);

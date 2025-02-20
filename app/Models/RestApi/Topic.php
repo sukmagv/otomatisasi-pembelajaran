@@ -14,8 +14,8 @@ class Topic extends Model
     protected $fillable = [
         'title',
         'description',
-        'created_by',
-        'updated_by',
+        'created_at',
+        'updated_at',
     ];
 
     public function tasks()

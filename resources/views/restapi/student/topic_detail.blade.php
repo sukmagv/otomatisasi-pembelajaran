@@ -8,7 +8,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    {{-- <link href="style.css" rel="stylesheet"> --}}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -127,7 +127,36 @@
         .text:hover {
         color: black; /* Change text color to blue on hover */
         text-decoration: underline; /* Add underline on hover */
-    }
+        }
+        .accordion-button::after {
+        order: -1; /* Memindahkan arrow ke kiri */
+        margin-right: 10px;
+        margin-left: 0;
+        }
+        .accordion-button {
+            background-color: transparent !important; /* Hapus background default */
+            box-shadow: none !important; /* Hapus efek shadow saat aktif */
+            border: none; /* Hapus border */
+            color: inherit; /* Gunakan warna teks bawaan */
+            font-weight: bold !important;
+        }
+
+        .accordion-button:not(.collapsed) {
+            background-color: transparent !important; /* Tetap transparan saat aktif */
+            color: inherit; /* Jaga warna teks */
+        }
+
+        .accordion-button:focus {
+            box-shadow: none !important; /* Hapus shadow saat diklik */
+        }
+
+        .accordion-item {
+            border: none; /* Hapus border antar item */
+        }
+
+        .list-group-item {
+            border: none !important; /* Hapus border antar task */
+        }
     </style>
     
     <style>
@@ -175,51 +204,82 @@
             </p>
         </div>        
 
-        {{-- <div class="progress-container">
-            <div id="progressbar"></div>
-        </div>
-        
-        <div id="progress">0%</div> --}}
-
         <div class="progress-container">
             <div id="progressbar" style="width: {{ session('progress', 0) }}%;"></div>
         </div>
         <div id="progress">{{ session('progress', 0) }}%</div>
         
-        <ul class="list">
+        <div class="accordion" id="topicsAccordion" style="margin-top: 20px;">
             @foreach($topics as $topic)
-                <li class="list-item">
-                    <a href="{{ route('restapi_topic_detail', ['id' => $topic->id]) }}" 
-                       class="list-item-title">
-                        {{ $topic->title }}
-                    </a>
-                </li>
+                @php
+                    // Ambil task dengan order_number = 1 untuk setiap topic
+                    $defaultTask = isset($tasks[$topic->id]) ? $tasks[$topic->id]->where('order_number', 1)->first() : null;
+        
+                    // Cek apakah topic yang sedang dipilih sesuai dengan yang ada di request
+                    $isActive = request()->query('id') == $topic->id;
+                    
+                    // Ambil ID task yang dipilih dari request
+                    $selectedTaskId = request()->query('task_id');
+                @endphp
+        
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading{{ $topic->id }}">
+                        <button class="accordion-button {{ $isActive ? '' : 'collapsed' }}" type="button" 
+                                data-bs-toggle="collapse" data-bs-target="#collapse{{ $topic->id }}" 
+                                aria-expanded="{{ $isActive ? 'true' : 'false' }}" aria-controls="collapse{{ $topic->id }}">
+                            {{ $topic->title }}
+                        </button>
+                    </h2>
+                    <div id="collapse{{ $topic->id }}" class="accordion-collapse collapse {{ $isActive ? 'show' : '' }}" 
+                         aria-labelledby="heading{{ $topic->id }}" data-bs-parent="#topicsAccordion">
+                        <div class="accordion-body">
+                            @if(isset($tasks[$topic->id]) && count($tasks[$topic->id]) > 0)
+                                <ul class="list-group border-0">
+                                    @foreach($tasks[$topic->id] as $taskItem)
+                                        @php
+                                            // Cek apakah task ini yang sedang dipilih
+                                            $isChecked = ($selectedTaskId && $selectedTaskId == $taskItem->id) || 
+                                                         (!$selectedTaskId && $defaultTask && $defaultTask->id == $taskItem->id);
+                                        @endphp
+                                        <li class="list-group-item border-0 d-flex align-items-center">
+                                            <!-- Link sebagai pengganti radio button -->
+                                            <a href="{{ route('restapi_topic_detail', ['id' => $topic->id, 'task_id' => $taskItem->id]) }}" 
+                                               class="d-flex align-items-center text-decoration-none" style="color: inherit;">
+                                                <!-- Radio-style effect -->
+                                                <span class="form-check me-2">
+                                                    <input type="radio" class="form-check-input" disabled {{ $isChecked ? 'checked' : '' }}>
+                                                </span>
+                                                <!-- Nama Task -->
+                                                <span class="form-check-label">
+                                                    {{ $taskItem->title }}
+                                                </span>
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @else
+                                <p class="text-muted">No tasks available for this topic.</p>
+                            @endif
+                        </div>
+                    </div>
+                </div>
             @endforeach
-        </ul>
-        
+        </div>                
     </div>
-    <div class="form-group row">
 
-        
-    </div>
-    <div style="padding: 20px; max-width: 68%; margin-left:5px;  ">
-        <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px;margin-bottom:40px">
-            @php
-                if($pdf_reader == 0):
-                // echo $html_start;
-                // dd($result->file_path);
-            @endphp
-            
-            <iframe src="{{ asset($result->file_path) }}" style="width: 100%; height: 510px"></iframe></iframe>
-            @php
-                endif;
-            @endphp
-
+    <div style="padding: 20px; max-width: 68%; margin-left:5px;">
+        <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px; margin-bottom:40px">
+            @if($pdf_reader == 1 && $taskWithFile)
+            <iframe src="{{ url($taskWithFile->file_path) }}" style="width: 100%; height: 510px;"></iframe>
+            @else
+                <p class="text-muted">No PDF available for this topic.</p>
+            @endif
         </div>
     </div>
+    
 
     @if($user->role == 'teacher')
-    <div style="padding: 20px; max-width: 68%; margin-left:5px;  ">
+    <div style="padding: 20px; max-width: 68%; margin-left:5px;">
         <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px;margin-bottom:40px">
         <!-- <a href="{{ asset('/storage/private/febri syawaldi/febri syawaldi_db_conn.php') }}" download>Download File</a>
         <a href="{{public_path('storage/private/febri syawaldi/febri syawaldi_db_conn.php')}}" download>Click me</a> -->
@@ -252,9 +312,9 @@
         
     @endif
     
-    {{-- @if($flag == 1) --}}
+    @if($activeTask && $activeTask->flag == 1)
 
-    <div style="padding: 20px; max-width: 68%; margin-left:5px;  ">
+    <div style="padding: 20px; max-width: 68%; margin-left:5px;">
         <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px;margin-bottom:40px">
             <div style="padding-top: 15px; padding-bottom: 15px">
                 <p class='text-list' style='font-size: 24px; font-weight: 600;width: 400px !important;'> Upload File Practicum </p>
@@ -320,9 +380,9 @@
             </div>
         </div>
     </div>
-    {{-- @else
+    @else
         
-    @endif --}}
+    @endif
 
     <!-- Footer -->
     <footer class="text-center p-2 fixed-bottom" style="background-color: #EAEAEA; color: #636363; width: 100%;">
@@ -331,14 +391,20 @@
     
     <script src="https://cdn.ckeditor.com/ckeditor5/34.2.0/classic/ckeditor.js"></script>
     <script type="text/javascript">
-        ClassicEditor
-            .create(document.querySelector('#editor'), {
-                ckfinder: {
-                    
-                    uploadUrl: '{{route('uploadimage').'?_token='.csrf_token()}}',
-                   
-                }
-            });
+        document.addEventListener("DOMContentLoaded", function() {
+            let editorElement = document.querySelector('#editor');
+
+            if (editorElement) {
+                ClassicEditor
+                    .create(editorElement, {
+                        ckfinder: {
+                            uploadUrl: '{{ route('uploadimage').'?_token='.csrf_token() }}'
+                        }
+                    })
+                    .catch(error => console.error(error));
+            }
+        });
+
     </script>
     <script>
         function toggleSidebar() {
