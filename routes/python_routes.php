@@ -1,11 +1,14 @@
 <?php
 
-use App\Http\Controllers\PHP\Student\WelcomeController;
-use App\Http\Controllers\PHP\Student\DashboardUnitControllers;
-use App\Http\Controllers\PHP\Student\StudikasusController;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Python\AuthController;
+use App\Http\Controllers\Python\MaterialController;
+use App\Http\Controllers\Python\StudentSubmissionController;
+use App\Http\Controllers\PHP\Student\WelcomeController;
+use App\Http\Controllers\PHP\Student\StudikasusController;
+use App\Http\Controllers\PHP\Student\DashboardUnitControllers;
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard-student', function () {
         return view('dashboard_student');

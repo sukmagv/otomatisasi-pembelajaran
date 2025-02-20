@@ -3,8 +3,8 @@
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\DataController;
 
+use App\Http\Controllers\DataController;
 use Laravel\Socialite\Facades\Socialite;
 use App\Http\Controllers\SocialController;
 
@@ -45,7 +45,7 @@ Route::get('/signup', function () {
 Route::post('/logoutt', [AuthController::class, 'logoutt'])
     ->name('logoutt');
 Route::get('/logout', [AuthController::class, 'logoutt'])
-    ->name('logout');
+    ->name('logouttt');
 
 // Route::group(["prefix" => 'test', 'middleware' => ['login'],  'as' => 'test.'], function(){
 

@@ -3,32 +3,25 @@
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\RestApi\RestApiController;
+use App\Http\Controllers\RestApi\TeacherController;
 
-Route::group(['middleware' => ['auth']], function() {
+Route::group(['middleware' => ['auth', 'student']], function() {
     Route::prefix('restapi')->group(function () {
         Route::get('/start', [RestApiController::class, 'index'])->name('restapi_welcome');
         Route::get('/topic-detail', [RestApiController::class, 'topic_detail'])->name('restapi_topic_detail');
-        // Route::get('/php-admin', [PHPController::class, 'php_admin'])->name('php_admin');
-        // Route::post('/uploadimage', [PHPController::class, 'upload'])->name('uploadimage');
-        // Route::get('/send-task', [PHPController::class, 'send_task'])->name('send_task');
-        // Route::post('/session_progress', [PHPController::class, 'session_progress'])->name('session_progress');
         Route::post('/submit-task', [RestApiController::class, 'submit_task'])->name('restapi_submit_task');
         Route::get('/get-progress', [RestApiController::class, 'getProgress'])->name('restapi_get_progress');
-        // Route::get('/result-task', [PHPController::class, 'result_task'])->name('result_task');
-        // Route::get('/result-test-student', [PHPController::class, 'result_test'])->name('phpunit.result-test-student');
-        // Route::any('/akhir-ujian', [PHPController::class, 'unittesting'])->name('unittesting');
-
-
-        // Route::any('/baru/submit_score', [PHPController::class, 'submit_score_baru'])->name('php_submit_score_baru');
     });
 });
 
-// Route::group(['middleware' => ['auth', 'teacher']], function() {
-//     Route::prefix('php')->group(function () {
-
-//         Route::get('/teacher/topics',[PHPDosenController::class, 'topics'])->name('topics');
-//         Route::get('/teacher/topics/add/{id}', [PHPDosenController::class, 'add_topics'])->name('topics');
-//         Route::post('/teacher/topics/simpan', [PHPDosenController::class, 'simpan'])->name('simpan');
-//     });
-
-// });
+Route::group(['middleware' => ['auth', 'teacher']], function() {
+    Route::prefix('restapi')->group(function () {
+        Route::get('/start', [TeacherController::class, 'index'])->name('restapi_welcome');
+        Route::post('/add-topic', [TeacherController::class, 'addTopic'])->name('restapi_add_topic');
+        Route::post('/update-topic', [TeacherController::class, 'updateTopic'])->name('restapi_update_topic');
+        Route::post('/delete-topic', [TeacherController::class, 'deleteTopic'])->name('restapi_delete_topic');
+        Route::post('/add-task', [TeacherController::class, 'addTask'])->name('restapi_add_task');
+        Route::post('/update-task', [TeacherController::class, 'updateTask'])->name('restapi_update_task');
+        Route::post('/delete-task', [TeacherController::class, 'deleteTask'])->name('restapi_delete_task');
+    });
+});

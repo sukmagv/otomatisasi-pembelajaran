@@ -19,7 +19,7 @@ class RestApiController extends Controller
         $topics = Topic::all();
         $topicsCount = count($topics);
 
-        return view('restapi.index', [
+        return view('restapi.student.index', [
             'topics' => $topics,
             'topicsCount' => $topicsCount,
         ]);
@@ -68,7 +68,7 @@ class RestApiController extends Controller
         ]);
 
         // Save submit file to storage/app/public/uploads/
-        $filePath = $request->file('file')->store('uploads', 'public');
+        $filePath = $request->file('file')->store('submissions', 'restapi', 'public');
 
         // Save submit data to database
         Submission::create([

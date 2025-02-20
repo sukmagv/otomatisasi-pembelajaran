@@ -18,7 +18,7 @@ class TeacherMiddleware
     public function handle(Request $request, Closure $next): Response
     {
 
-    	if ( Auth::user()->teacher !== "teacher" ) {
+    	if ( Auth::user()->role !== "teacher" ) {
 
     		abort(403, "Unauthorized action.");
     	}

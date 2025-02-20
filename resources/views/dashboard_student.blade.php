@@ -45,7 +45,7 @@
                     <img src="{{ asset('./images/Group.png') }}" alt="Group" style="height: 50px; margin-right: 10px;">
                     <i class="fas fa-chevron-down" style="color: #0079FF;"></i>
                     <div class="dropdown-content" id="dropdownContent">
-                        <form id="logout-form" action="{{ route('logout') }}" method="POST">
+                        <form id="logout-form" action="{{ route('logoutt') }}" method="POST">
                             @csrf
                             <a href="/" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
                         </form>

@@ -5,21 +5,25 @@ namespace App\Models\RestApi;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Topic extends Model
+class Task extends Model
 {
     use HasFactory;
 
-    protected $table = 'restapi_topics';
+    
+    protected $table = 'restapi_topic_tasks';
 
     protected $fillable = [
+        'topic_id',
         'title',
-        'description',
+        'order_number',
+        'file_path',
+        'flag',
         'created_by',
         'updated_by',
     ];
 
-    public function tasks()
+    public function topic()
     {
-        return $this->hasMany(Task::class);
+        return $this->belongsTo(Topic::class);
     }
 }
