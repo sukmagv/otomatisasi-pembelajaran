@@ -258,8 +258,8 @@
                                                     <td class="text-center">
                                                         <!-- Tombol Edit -->
                                                         <button class="btn btn-warning btn-sm" 
-                                                                data-bs-toggle="modal" data-bs-target="#editModal" 
-                                                                onclick="editTask('{{ $task->id }}', '{{ $task->topic_id }}', '{{ $task->title }}', '{{ (int) $task->order_number }}', '{{ $task->flag }}')">
+                                                                data-bs-toggle="modal" data-bs-target="#editTaskModal" 
+                                                                onclick="editTask('{{ $task->id }}', '{{ $task->topic_id }}', '{{ $task->title }}', '{{ (int) $task->order_number }}', '{{ $task->flag }}', '{{ $task->file_path}}')">
                                                             <i class="fas fa-edit"></i> Edit
                                                         </button>
                                     
@@ -423,6 +423,16 @@
                                 <option value="1">Yes</option>
                                 <option value="0">No</option>
                             </select>
+                            <!-- Input File -->
+                            <label for="editTaskFile" class="form-label">Upload PDF (Kosongkan jika tidak ingin mengubah)</label>
+                            <input type="file" class="form-control" id="editTaskFile" name="file_path" accept=".pdf">
+
+                            <!-- Menampilkan Nama File Lama -->
+                            <p id="fileNameDisplay" class="text-muted"></p>
+
+                            <!-- Hidden input untuk menyimpan file lama -->
+                            <input type="hidden" id="oldTaskFilePath" name="file_path" value="">
+
                         </div>
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                     </form>
@@ -566,7 +576,6 @@
             $('#deleteTopicModal').modal('show');
         }
 
-
         // Function untuk menampilkan modal Add Task
         function addTask() {
             $('#addTaskTopic').val('');
@@ -578,11 +587,25 @@
         }
     
         // Function untuk menampilkan modal Edit Task
-        function editTask(id, topic_id, title, order_number, flag) {
+        function editTask(id, topic_id, title, order_number, flag, file_path) {
             $('#editTaskId').val(id);
             $('#editTaskTopic').val(topic_id);
             $('#editTaskTitle').val(title);
             $('#editTaskOrder').val(order_number);
+            $('#editTaskFile').val('');
+            
+            // Kosongkan input file agar tidak memaksa pengguna mengunggah ulang
+            $('#editTaskFile').val('');
+
+            // Ambil nama file asli dari path
+            let fileName = file_path ? file_path.split('/').pop() : 'Belum ada file';
+
+            // Tampilkan nama file di placeholder
+            $('#fileNameDisplay').text(fileName);
+
+            // Simpan nama file lama di hidden input (akan dikirim ke backend)
+            $('#oldTaskFilePath').val(file_path);
+
             $('#editTaskModal').modal('show');
         }
     

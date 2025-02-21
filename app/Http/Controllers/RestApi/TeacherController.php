@@ -75,7 +75,7 @@ class TeacherController extends Controller
         if ($request->hasFile('file_path')) {
             $file = $request->file('file_path');
             $fileName = time() . '_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('restapi/tasks', $fileName, 'public');
+            $filePath = $file->storeAs('storage/restapi/tasks', $fileName, 'public');
         }
         
         $data = [
@@ -96,18 +96,35 @@ class TeacherController extends Controller
     // Update task in database
     public function updateTask(Request $request)
     {
-        $data = $request->validate([
-            'topic_id' => 'required|exists:topics,id',
-            'title' => 'required|string',
-            'order_number' => 'required|integer',
-            'file_path' => 'required|mimes:pdf|max:2048',
-            'flag' => 'required|boolean',
-            'created_at' => Carbon::now(),
+        $task = Task::findOrFail($request->id);
+
+        // Cek apakah ada file baru yang diunggah
+        if ($request->hasFile('file_path')) {
+            // Hapus file lama jika ada
+            if ($task->file_path && Storage::exists(str_replace('storage/', '', $task->file_path))) {
+                Storage::delete(str_replace('storage/', '', $task->file_path));
+            }
+
+            // Simpan file baru
+            $file = $request->file('file_path');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('storage/restapi/tasks', $fileName, 'public');
+
+            // Simpan path file baru ke database
+            $request['file_path'] = 'storage/' . $filePath;
+        } else {
+            // Gunakan file lama jika tidak ada file baru
+            $request['file_path'] = $task->file_path;
+        }
+
+        // Update data
+        $task->update([
+            'topic_id' => $request->topic_id,
+            'title' => $request->title,
+            'order_number' => $request->order_number,
+            'flag' => $request->flag,
             'updated_at' => Carbon::now(),
         ]);
-
-        $task = Task::findOrFail($data['id']);
-        $task->update($data);
 
         return back()->with('success', 'Task updated successfully!');
     }
