@@ -318,47 +318,60 @@
         <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px;margin-bottom:40px">
             <div style="padding-top: 15px; padding-bottom: 15px">
                 <p class='text-list' style='font-size: 24px; font-weight: 600;width: 400px !important;'> Upload File Practicum </p>
-                <div class="texts" style=" position: relative;">   
-                    <style>    
-                        text:hover{
-                            text-decoration: none !important;
-                        }
-                    </style>    
+                <div class="texts" style="position: relative;">
                     <form action="{{ Route('restapi_submit_task') }}" method="POST" enctype="multipart/form-data">
                         {{ csrf_field() }}
-                        
+    
                         {{-- ID Topik sebagai input hidden --}}
                         <input type="hidden" name="id" value="{{ old('id', request()->query('id')) }}">
-                    
-                        {{-- Input untuk file --}}
+    
+                        {{-- Tampilkan File yang Sudah Diupload --}}
+                        @if($submission && $submission->submit_path)
+                            <div class="form-group" style="margin-bottom: 20px">
+                                <label for="file">Uploaded File:</label><br>
+                                <a href="{{ asset('storage/' . $submission->submit_path) }}" target="_blank">
+                                    {{ basename($submission->submit_path) }}
+                                </a>
+                            </div>
+                        @endif
+    
+                        {{-- Input untuk file baru (opsional jika sudah ada) --}}
                         <div class="form-group">
-                            <label for="file">Evidence</label>
-                            <input type="file" name="file" class="form-control" required>
+                            <label for="file">Upload New Evidence</label>
+                            <input type="file" name="file" class="form-control" {{ $submission ? '' : 'required' }}>
                             <small>Enter the work results <code>.php | .html</code> (Max: 2MB)</small>
                         </div>
-                    
+    
                         <br />
-                    
-                        {{-- Input untuk komentar --}}
+    
+                        {{-- Tampilkan Komentar Sebelumnya --}}
+                        @if($submission && $submission->submit_comment)
+                            <div class="form-group">
+                                <label>Previous Comment:</label>
+                                <p class="text-muted">{{ $submission->submit_comment }}</p>
+                            </div>
+                        @endif
+    
+                        {{-- Input untuk komentar baru --}}
                         <div class="form-group">
-                            <label for="comment">Comment</label>
+                            <label for="comment">New Comment (Optional)</label>
                             <textarea class="form-control" name="comment" placeholder="(Optional) Add a comment..."></textarea>
                         </div>
-                    
+    
                         <br />
-                    
+    
                         {{-- Tombol Submit --}}
                         <div class="form-group">
                             <input type="submit" value="Upload" class="btn btn-primary">
                         </div>
-                    
+    
                         {{-- Pesan sukses jika berhasil --}}
                         @if (session('success'))
                             <div class="alert alert-success mt-3">
                                 {{ session('success') }}
                             </div>
                         @endif
-                    
+    
                         {{-- Tampilkan error jika ada masalah --}}
                         @if ($errors->any())
                             <div class="alert alert-danger mt-3">
@@ -369,17 +382,12 @@
                                 </ul>
                             </div>
                         @endif
-                        
-                        {{-- @if($output)
-                        <p>{!! $output !!}</p>
-                        @else
-                        <p>{!! $output !!}</p>
-                        @endif --}}
                     </form>
                 </div>
             </div>
         </div>
     </div>
+    
     @else
         
     @endif

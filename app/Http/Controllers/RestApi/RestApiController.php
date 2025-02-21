@@ -53,6 +53,12 @@ class RestApiController extends Controller
 
         $activeTask = $tasks[$topic_id]->firstWhere('id', $request->query('task_id')) ?? null;
 
+        // Ambil submission terakhir untuk user dan task tertentu
+        $submission = Submission::where('user_id', auth()->id())
+            ->where('task_id', $request->id)
+            ->latest()
+            ->first();
+
         return view('restapi.student.topic_detail', [
             'row' => $result,
             'user' => $user,
@@ -63,6 +69,7 @@ class RestApiController extends Controller
             'pdf_reader' => $pdf_reader,
             'activeTask' => $activeTask,
             'topicsCount' => $topicsCount,
+            'submission' => $submission,
             // 'output' => $output,
         ]);
     }
@@ -70,17 +77,18 @@ class RestApiController extends Controller
     // Submit task to database
     public function submit_task(Request $request)
     {
-        // Input validation
+        // Validasi input
         $request->validate([
             'file' => 'required|file|max:2048|extensions:php,html',
             'comment' => 'nullable|string',
             'id' => 'required|exists:restapi_topic_tasks,id'
         ]);
 
+        // Jika user mengupload file baru, upload file & update path
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $fileName = time() . '_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('restapi/submissions', $fileName, 'public');
+            $filePath = $file->storeAs('storage/restapi/submissions', $fileName, 'public');
         }
 
         // Save submit data to database
@@ -104,14 +112,16 @@ class RestApiController extends Controller
         // Get user ID
         $userId = auth()->id();
 
-        // Count all topics in database
+        // Count all topics (total tasks in database)
         $totalTasks = Task::count();
 
-        // Count all submit by user and topic
-        $submittedTask = Submission::where('user_id', $userId)->count();
+        // Count unique submitted tasks by user
+        $uniqueSubmittedTasks = Submission::where('user_id', $userId)
+            ->distinct('task_id') // Hanya hitung task unik
+            ->count('task_id');
 
-        // Count progress presentation
-        $progress = ($totalTasks > 0) ? round(($submittedTask / $totalTasks) * 100) : 0;
+        // Calculate progress percentage
+        $progress = ($totalTasks > 0) ? round(($uniqueSubmittedTasks / $totalTasks) * 100) : 0;
 
         // Save progress to session
         session(['progress' => $progress]);
