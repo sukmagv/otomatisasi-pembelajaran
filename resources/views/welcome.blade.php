@@ -52,7 +52,7 @@
 
         <div class="container text-center" style="margin-top: 35px;">
           <div class="row">
-            @foreach ($cards as $card)
+            {{-- @foreach ($cards as $card)
             <div class="card p-0" style="width: 305px; height: 375px; margin-left: 25px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
               <img src="{{ $card['image'] }}" class="card-img-top" style="width: auto; height: 200px;">
               <div class="card-body d-flex flex-column">
@@ -70,7 +70,7 @@
                 </div>
               </div>
             </div>
-            @endforeach
+            @endforeach --}}
           </div>
         </div>
 
@@ -84,7 +84,7 @@
       Experience<br>Extraordinary With The Services We Provide</p>
 
     <!-- CARD 1 -->
-    <div class="container text-center" style="margin-top: 100px;">
+    {{-- <div class="container text-center" style="margin-top: 100px;">
       <div class="row">
         @foreach ($cardsData as $card)
         <div class="col" style="width: 430px; height: 440px; margin-left: 25px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
@@ -111,7 +111,7 @@
         </div>
         @endforeach
       </div>
-    </div>
+    </div> --}}
   </div>
 
 </body>

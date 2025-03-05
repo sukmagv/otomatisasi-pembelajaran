@@ -30,7 +30,15 @@
                 <div class="mx-auto">
                     <ul class="navbar-nav mb-2 mb-lg-0 justify-content-center">
                         <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="/dashboard-student">Dashboard Student</a>
+                        @if(Auth::check())
+                            @if(Auth::user()->role === 'student')
+                            <a class="nav-link active" aria-current="page" href="/dashboard-student">Dashboard Student</a>
+                            @elseif(Auth::user()->role === 'teacher')
+                            <a class="nav-link active" aria-current="page" href="/dashboard-student">Dashboard Teacher</a>
+                            @else
+                            <a class="nav-link active" aria-current="page" href="/dashboard-student">Dashboard Admin</a>
+                            @endif
+                        @endif
                         </li>
                         <li class="nav-item">
                             <a class="nav-link active" aria-current="page" href="#">Tutorials</a>
@@ -45,7 +53,7 @@
                     <img src="{{ asset('./images/Group.png') }}" alt="Group" style="height: 50px; margin-right: 10px;">
                     <i class="fas fa-chevron-down" style="color: #0079FF;"></i>
                     <div class="dropdown-content" id="dropdownContent">
-                        <form id="logout-form" action="{{ route('logoutt') }}" method="POST">
+                        <form id="logout-form" action="{{ route('logout') }}" method="POST">
                             @csrf
                             <a href="/" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
                         </form>

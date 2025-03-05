@@ -187,7 +187,7 @@
                             </ul>
             
                             <!-- TAB CONTENT -->
-                            <div class="tab-content mt-3">
+                            <div class="tab-content" style="margin-bottom: 50px">
                                 <!-- Learning Topic Tab -->
                                 <div class="tab-pane fade show active" id="topics">
                                     <button class="btn btn-primary my-3" style="width: 180px" onclick="addTopic()">
@@ -256,6 +256,11 @@
                                                     <td>{{ $task->order_number }}</td>
                                                     <td>{{ $task->flag == 1 ? 'Yes' : 'No' }}</td>
                                                     <td class="text-center">
+                                                        <!-- Tombol Open -->
+                                                        <button class="btn btn-primary btn-sm" onclick="openTask('{{ $task->id }}', '{{ $task->topic_id }}')">
+                                                            <i class="fas fa-eye"></i> Open
+                                                        </button>
+
                                                         <!-- Tombol Edit -->
                                                         <button class="btn btn-warning btn-sm" 
                                                                 data-bs-toggle="modal" data-bs-target="#editTaskModal" 
@@ -574,6 +579,11 @@
         function deleteTopic(id) {
             $('#deleteTopicId').val(id);
             $('#deleteTopicModal').modal('show');
+        }
+
+        // Function untuk menampilkan isi Task
+        function openTask(id, topic_id) {
+            window.location.href = "{{ route('restapi_open_task') }}?id=" + encodeURIComponent(topic_id) + "&task_id=" + encodeURIComponent(id);
         }
 
         // Function untuk menampilkan modal Add Task

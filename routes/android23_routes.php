@@ -81,4 +81,4 @@ Route::group(['middleware' => ['auth', 'student']], function() {
 
 
 
-Route::get("p", function() {})->name('logout');
+Route::get("p", function() {})->name('logout_android23');

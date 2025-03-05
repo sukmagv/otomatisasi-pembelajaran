@@ -42,10 +42,10 @@ Route::get('/signup', function () {
     return view('signup');
 })->name('signup');
 
-Route::post('/logoutt', [AuthController::class, 'logoutt'])
-    ->name('logoutt');
-Route::get('/logout', [AuthController::class, 'logoutt'])
-    ->name('logouttt');
+Route::post('/logout', [AuthController::class, 'logout'])
+    ->name('logout');
+Route::get('/logout', [AuthController::class, 'logout'])
+    ->name('logout');
 
 // Route::group(["prefix" => 'test', 'middleware' => ['login'],  'as' => 'test.'], function(){
 

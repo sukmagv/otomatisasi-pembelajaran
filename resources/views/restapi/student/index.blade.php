@@ -160,7 +160,7 @@
            
             <!-- CONTENT -->
             <main class="col-md-9">
-                <div class="p-20 min-h-96 bg-white" id="start-learning" style="padding-bottom: 30px">
+                <div class="p-20 min-h-96 bg-white" id="start-learning" style="padding-bottom: 30px; margin-bottom: 50px">
                     <p style="font-size: 24px; font-weight: 500; color: #34364A;">Start Learning</p>
                     <div>
                         <div class="container mt-4">

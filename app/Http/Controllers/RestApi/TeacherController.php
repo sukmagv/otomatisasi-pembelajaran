@@ -6,8 +6,10 @@ use Carbon\Carbon;
 use App\Models\RestApi\Task;
 use Illuminate\Http\Request;
 use App\Models\RestApi\Topic;
+use App\Models\RestApi\Submission;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class TeacherController extends Controller
@@ -69,13 +71,61 @@ class TeacherController extends Controller
         return back()->with('success', 'Topic deleted successfully!');
     }
 
+    // Get topic detail from database
+    public function openTask(Request $request)
+    {
+        // check if user is logged in
+        $user = Auth::user();
+
+        // Get ID from URL parameter
+        $topic_id = (int) $request->query('id');
+
+        $task_id = (int) $request->query('task_id');
+        
+        // Get topic details
+        $result = Topic::with('tasks')->findOrFail($topic_id);
+        
+        // Get all topics
+        $topics = Topic::all();
+
+        // Get total topics count
+        $topicsCount = Topic::count();
+
+        $tasks = Task::all()->groupBy('topic_id');
+
+        // Search file in tasks table by ID topic
+        $taskWithFile = $result->tasks->firstWhere('file_path', '!=', null);
+
+        $pdf_reader = $taskWithFile ? 1 : 0;
+
+        // Ambil submission terakhir untuk user dan task tertentu
+        $submissions = Submission::where('task_id', $task_id)
+            ->latest()
+            ->with('user')
+            ->get()
+            ->unique('user_id');
+
+        return view('restapi.teacher.topic_detail', [
+            'row' => $result,
+            'user' => $user,
+            'topic_id' => $topic_id,
+            'topics' => $topics,
+            'tasks' => $tasks,
+            'taskWithFile' => $taskWithFile,
+            'pdf_reader' => $pdf_reader,
+            'topicsCount' => $topicsCount,
+            'submissions' => $submissions,
+            // 'output' => $output,
+        ]);
+    }
+
     // Add task to database
     public function addTask(Request $request)
     {
         if ($request->hasFile('file_path')) {
             $file = $request->file('file_path');
             $fileName = time() . '_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('storage/restapi/tasks', $fileName, 'public');
+            $filePath = $file->storeAs('restapi/tasks', $fileName, 'public');
         }
         
         $data = [
@@ -108,7 +158,7 @@ class TeacherController extends Controller
             // Simpan file baru
             $file = $request->file('file_path');
             $fileName = time() . '_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('storage/restapi/tasks', $fileName, 'public');
+            $filePath = $file->storeAs('restapi/tasks', $fileName, 'public');
 
             // Simpan path file baru ke database
             $request['file_path'] = 'storage/' . $filePath;

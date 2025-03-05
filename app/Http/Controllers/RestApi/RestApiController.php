@@ -34,6 +34,8 @@ class RestApiController extends Controller
 
         // Get ID from URL parameter
         $topic_id = (int) $request->query('id');
+
+        $task_id = (int) $request->query('task_id');
         
         // Get topic details
         $result = Topic::with('tasks')->findOrFail($topic_id);
@@ -55,7 +57,7 @@ class RestApiController extends Controller
 
         // Ambil submission terakhir untuk user dan task tertentu
         $submission = Submission::where('user_id', auth()->id())
-            ->where('task_id', $request->id)
+            ->where('task_id', $task_id)
             ->latest()
             ->first();
 
@@ -88,7 +90,7 @@ class RestApiController extends Controller
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $fileName = time() . '_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('storage/restapi/submissions', $fileName, 'public');
+            $filePath = $file->storeAs('restapi/submissions', $fileName, 'public');
         }
 
         // Save submit data to database

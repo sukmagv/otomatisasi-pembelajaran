@@ -189,7 +189,7 @@
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-light bg-light" style="padding: 15px 20px; border-bottom: 1px solid #E4E4E7; font-family: 'Poppins', sans-serif;">
-        <a class="navbar-brand" href="{{ route('restapi_student') }}">
+        <a class="navbar-brand" href="{{ route('restapi_teacher') }}">
             <img src="{{ asset('images/left-arrow.png') }}" style="height: 24px; margin-right: 10px;">
             {{ $row->title; }}
         </a>
@@ -277,82 +277,37 @@
         </div>
     </div>
     
-    @if($activeTask && $activeTask->flag == 1)
 
+    @if($user->role == 'teacher')
     <div style="padding: 20px; max-width: 68%; margin-left:5px;">
         <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px;margin-bottom:40px">
-            <div style="padding-top: 15px; padding-bottom: 15px">
-                <p class='text-list' style='font-size: 24px; font-weight: 600;width: 400px !important;'> Upload File Practicum </p>
-                <div class="texts" style="position: relative;">
-                    <form action="{{ Route('restapi_submit_task') }}" method="POST" enctype="multipart/form-data">
-                        {{ csrf_field() }}
-    
-                        {{-- ID Topik sebagai input hidden --}}
-                        <input type="hidden" name="id" value="{{ old('id', request()->query('id')) }}">
-    
-                        {{-- Tampilkan File yang Sudah Diupload --}}
-                        @if($submission && $submission->submit_path)
-                            <div class="form-group" style="margin-bottom: 20px">
-                                <label for="file">Uploaded File:</label><br>
-                                <a href="{{ asset('storage/' . $submission->submit_path) }}" target="_blank">
-                                    {{ basename($submission->submit_path) }}
-                                </a>
-                            </div>
-                        @endif
-    
-                        {{-- Input untuk file baru (opsional jika sudah ada) --}}
-                        <div class="form-group">
-                            <label for="file">Upload New Evidence</label>
-                            <input type="file" name="file" class="form-control" {{ $submission ? '' : 'required' }}>
-                            <small>Enter the work results <code>.php | .html</code> (Max: 2MB)</small>
-                        </div>
-    
-                        <br />
-    
-                        {{-- Tampilkan Komentar Sebelumnya --}}
-                        @if($submission && $submission->submit_comment)
-                            <div class="form-group">
-                                <label>Previous Comment:</label>
-                                <p class="text-muted">{{ $submission->submit_comment }}</p>
-                            </div>
-                        @endif
-    
-                        {{-- Input untuk komentar baru --}}
-                        <div class="form-group">
-                            <label for="comment">New Comment (Optional)</label>
-                            <textarea class="form-control" name="comment" placeholder="(Optional) Add a comment..."></textarea>
-                        </div>
-    
-                        <br />
-    
-                        {{-- Tombol Submit --}}
-                        <div class="form-group">
-                            <input type="submit" value="Upload" class="btn btn-primary">
-                        </div>
-    
-                        {{-- Pesan sukses jika berhasil --}}
-                        @if (session('success'))
-                            <div class="alert alert-success mt-3">
-                                {{ session('success') }}
-                            </div>
-                        @endif
-    
-                        {{-- Tampilkan error jika ada masalah --}}
-                        @if ($errors->any())
-                            <div class="alert alert-danger mt-3">
-                                <ul>
-                                    @foreach ($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        @endif
-                    </form>
-                </div>
-            </div>
+        <!-- <a href="{{ asset('/storage/private/febri syawaldi/febri syawaldi_db_conn.php') }}" download>Download File</a>
+        <a href="{{public_path('storage/private/febri syawaldi/febri syawaldi_db_conn.php')}}" download>Click me</a> -->
+
+
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Sumbit Date</th>
+                        <th>Action</th>
+                        <!-- Add more table headers as needed -->
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($submissions as $item)
+                        <tr>
+                            <td>{{ $item->user?->name }}</td>
+                            <td>{{ \Carbon\Carbon::parse($item->created_at)->translatedFormat('l, d F Y H:i') }}</td>
+                            <td><a href="{{ asset( $item->submit_path ) }}" download="" class="btn btn-primary">Download File</a></td>
+                            <!-- Add more table cells as needed -->
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+
         </div>
     </div>
-    
     @else
         
     @endif
