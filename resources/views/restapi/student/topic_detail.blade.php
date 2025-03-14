@@ -288,7 +288,8 @@
                         {{ csrf_field() }}
     
                         {{-- ID Topik sebagai input hidden --}}
-                        <input type="hidden" name="id" value="{{ old('id', request()->query('id')) }}">
+                        {{-- <input type="hidden" name="id" value="{{ old('id', request()->query('id')) }}"> --}}
+                        <input type="hidden" name="task_id" value="{{ old('task_id', request()->query('task_id')) }}">
     
                         {{-- Tampilkan File yang Sudah Diupload --}}
                         @if($submission && $submission->submit_path)
@@ -345,6 +346,13 @@
                                         <li>{{ $error }}</li>
                                     @endforeach
                                 </ul>
+                            </div>
+                        @endif
+
+                        @if(session('test_result'))
+                            <div class="alert alert-info">
+                                <h3><b>Hasil Pengujian:</b></h3>
+                                <pre>{{ session('test_result') }}</pre>
                             </div>
                         @endif
                     </form>

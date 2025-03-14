@@ -4,13 +4,16 @@ namespace App\Http\Controllers\RestApi;
 
 // use App\Models\PHP\Topic;
 use Carbon\Carbon;
+use App\Models\RestApi\Task;
 use Illuminate\Http\Request;
 use App\Models\RestApi\Topic;
 use App\Models\RestApi\Submission;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
-use App\Models\RestApi\Task;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Session;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 
 class RestApiController extends Controller
 {
@@ -76,39 +79,6 @@ class RestApiController extends Controller
         ]);
     }
 
-    // Submit task to database
-    public function submit_task(Request $request)
-    {
-        // Validasi input
-        $request->validate([
-            'file' => 'required|file|max:2048|extensions:php,html',
-            'comment' => 'nullable|string',
-            'id' => 'required|exists:restapi_topic_tasks,id'
-        ]);
-
-        // Jika user mengupload file baru, upload file & update path
-        if ($request->hasFile('file')) {
-            $file = $request->file('file');
-            $fileName = time() . '_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('restapi/submissions', $fileName, 'public');
-        }
-
-        // Save submit data to database
-        Submission::create([
-            'user_id' => auth()->id(), // Get user ID
-            'task_id' => (int) $request->id,
-            'submit_path' => $filePath,
-            'submit_comment' => $request->comment,
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
-        ]);
-
-        // Update progress
-        $this->getProgress();
-
-        return back()->with('success', 'Upload berhasil!');
-    }
-
     public function getProgress()
     {
         // Get user ID
@@ -129,5 +99,98 @@ class RestApiController extends Controller
         session(['progress' => $progress]);
 
         return response()->json(['progress' => $progress]);
+    }
+
+    // Submit task to database
+    public function submit_task(Request $request)
+    {
+        // Validasi input
+        $request->validate([
+            'file' => 'required|file|max:2048|extensions:php,html',
+            'comment' => 'nullable|string',
+            'task_id' => 'required|exists:restapi_topic_tasks,id',
+        ]);
+
+        DB::beginTransaction(); // Mulai transaksi
+
+        try {
+            // Jika user mengupload file baru, upload file & update path
+            if ($request->hasFile('file')) {
+                $file = $request->file('file');
+                $fileName = time() . '_' . $file->getClientOriginalName();
+                $filePath = $file->storeAs('restapi/submissions', $fileName, 'public');
+            }
+
+            // Save submit data to database
+            $submission = Submission::create([
+                'user_id' => auth()->id(),
+                'task_id' => (int) $request->task_id,
+                'submit_path' => $filePath,
+                'submit_comment' => $request->comment,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ]);
+
+            // Commit jika tidak ada error
+            DB::commit();
+
+            // Update progress
+            $this->getProgress();
+
+            // Ambil topic_id langsung dari relasi task
+            $topicId = Task::where('id', $submission->task_id)->value('topic_id');
+
+            // Jalankan Codeception
+            $this->runCodeceptionTest($topicId, $filePath);
+
+            // Dapatkan hasil pengujian
+            $testResult = $this->runCodeceptionTest($topicId, $filePath);
+
+            return back()->with('success', 'Upload berhasil! Tes otomatis telah dijalankan.')
+                     ->with('test_result', $testResult);
+
+        } catch (\Exception $e) {
+            DB::rollBack(); // Jika ada error, rollback transaksi
+            return back()->with('error', 'Gagal menyimpan submission: ' . $e->getMessage());
+        }
+    }
+
+    // Test files
+    private $testFiles = [
+        2 => 'Topic1DataTest.php',
+        3 => 'Topic2PostTest.php',
+        4 => 'Topic3GetTest.php',
+        5 => 'Topic4PutTest.php',
+        6 => 'Topic5DeleteTest.php',
+    ];
+
+    private function runCodeceptionTest($topicId, $filePath)
+    {
+        if (!isset($this->testFiles[$topicId])) {
+            Session::put('test_result', "Tidak ada test yang cocok untuk Topic ID: $topicId");
+            return "Tidak ada test yang cocok untuk Topic ID: $topicId";
+        }
+
+        $testFile = $this->testFiles[$topicId];
+        $submissionPath = public_path("storage/" . $filePath);
+
+        // Jalankan Codeception
+        $command = ['C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe', base_path('vendor/bin/codecept'), 'run', 'unit', $testFile];
+        $process = new Process($command);
+        $process->setTimeout(300);
+        $process->setEnv(['testFile' => $submissionPath]); // Set environment variable
+        $process->setWorkingDirectory(base_path());
+
+        try {
+            $process->mustRun(); // Pastikan proses berjalan dengan sukses
+            $output = $process->getOutput();
+        } catch (\Exception $e) {
+            $output = "Gagal menjalankan Codeception: " . ($e->getMessage() ?: $process->getErrorOutput());
+        }
+
+        // Simpan hasil ke session agar bisa diakses di Blade
+        Session::put('test_result', $output);
+
+        return $output;
     }
 }

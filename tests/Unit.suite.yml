@@ -1,0 +1,17 @@
+# Codeception Test Suite Configuration
+#
+# Suite for unit or integration tests.
+
+actor: UnitTester
+modules:
+    enabled:
+        - Asserts
+        - \Codeception\Module\Laravel
+        - \Codeception\Module\Db:
+            dsn: 'mysql:host=127.0.0.1;dbname=iclop'
+            user: 'root'
+            password: ''
+            dump: 'tests/_data/dump.sql'
+            populate: true
+            cleanup: false
+step_decorators: ~
