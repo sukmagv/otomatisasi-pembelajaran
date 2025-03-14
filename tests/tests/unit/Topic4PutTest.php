@@ -11,74 +11,74 @@ class Topic1UpdateTest extends Unit
 
     protected function _before()
     {
-        // Ambil path file dari environment variable atau CLI
+        // Retrieve the file path of the environment variable sent from the CLI
         $this->filePath = $_SERVER['testFile'] ?? $_ENV['testFile'] ?? null;
-
-        // Pastikan path file diberikan
-        $this->assertNotEmpty($this->filePath, "Path file harus diberikan sebagai argument --testFile");
-
-        // Pastikan file ada
-        $this->assertFileExists($this->filePath, "File yang diuji harus ada");
-
-        // Ambil isi file sebagai string
+    
+        // Make sure the file path is given
+        $this->assertNotEmpty($this->filePath, "The file path must be given as the --testFile argument");
+    
+        // Make sure the file exists
+        $this->assertFileExists($this->filePath, "Tested files must be present");
+    
+        // Retrieve file contents as a string
         $this->code = file_get_contents($this->filePath);
     }
 
     public function testValidPHPCode()
     {
         $tokens = token_get_all($this->code);
-        $this->assertNotEmpty($tokens, "Kode PHP harus valid tanpa error sintaks");
+        $this->assertNotEmpty($tokens, "PHP code must be valid without syntax errors");
     }
 
     public function testHeaderJsonOutput()
     {
-        $this->assertMatchesRegularExpression('/header\s*\(\s*"Content-Type:\s*application\/json"\s*\)/', $this->code, "Header harus mengatur output sebagai JSON");
+        $this->assertMatchesRegularExpression('/header\s*\(\s*"Content-Type:\s*application\/json"\s*\)/', $this->code, "The header should set the output as JSON");
     }
 
     public function testRequireDataFile()
     {
-        $this->assertMatchesRegularExpression('/require\s+"data.php"/', $this->code, "Harus ada 'require \"data.php\"' untuk mengambil fungsi getData");
+        $this->assertMatchesRegularExpression('/require\s+"data.php"/', $this->code, "There must be a 'require \“data.php\”' to retrieve the getData and saveData functions");
     }
 
     public function testGetDataFunctionCall()
     {
-        $this->assertMatchesRegularExpression('/\$data\s*=\s*getData\s*\(\s*\)/', $this->code, "Harus ada pemanggilan getData untuk mengambil data");
+        $this->assertMatchesRegularExpression('/\$data\s*=\s*getData\s*\(\s*\)/', $this->code, "There must be a getData call to retrieve the data");
     }
 
     public function testGetIdRetrieval()
     {
-        $this->assertMatchesRegularExpression('/\$id\s*=\s*isset\s*\(\s*\$_GET\s*\[\s*[\'"]id[\'"]\s*\]\s*\)\s*\?/', $this->code, "Harus ada pengecekan isset pada \$_GET['id']");
+        $this->assertMatchesRegularExpression('/\$id\s*=\s*isset\s*\(\s*\$_GET\s*\[\s*[\'"]id[\'"]\s*\]\s*\)\s*\?/', $this->code, "There must be an isset check on \$_GET['id']");
     }
 
     public function testInputJsonParsing()
     {
-        $this->assertMatchesRegularExpression('/\$input\s*=\s*json_decode\s*\(\s*file_get_contents\s*\(\s*"php:\/\/input"\s*\)/', $this->code, "Harus ada parsing JSON dari input");
+        $this->assertMatchesRegularExpression('/\$input\s*=\s*json_decode\s*\(\s*file_get_contents\s*\(\s*"php:\/\/input"\s*\)/', $this->code, "There must be JSON parsing of the input");
     }
 
     public function testReturn404IfIdNotFound()
     {
-        $this->assertMatchesRegularExpression('/if\s*\(\s*!?\$id\s*\|\|\s*!isset\s*\(\s*\$data\s*\[\s*\$id\s*\]\s*\)\s*\)/', $this->code, "Harus ada pengecekan jika ID tidak ditemukan");
-        $this->assertMatchesRegularExpression('/http_response_code\s*\(\s*404\s*\)/', $this->code, "Respon harus 404 jika ID tidak ditemukan");
-        $this->assertMatchesRegularExpression('/json_encode\s*\(\s*\[\s*"status"\s*=>\s*404\s*,\s*"error"\s*=>\s*"Item Not Found"\s*\]/', $this->code, "Harus ada pesan error 'Item Not Found' jika ID tidak ditemukan");
+        $this->assertMatchesRegularExpression('/if\s*\(\s*!?\$id\s*\|\|\s*!isset\s*\(\s*\$data\s*\[\s*\$id\s*\]\s*\)\s*\)/', $this->code, "There should be a check if the ID is not found");
+        $this->assertMatchesRegularExpression('/http_response_code\s*\(\s*404\s*\)/', $this->code, "Response should be 404 if ID not found");
+        $this->assertMatchesRegularExpression('/json_encode\s*\(\s*\[\s*"status"\s*=>\s*404\s*,\s*"error"\s*=>\s*"Item Not Found"\s*\]/', $this->code, "There should be an 'Item Not Found' error message if the ID is not found");
     }
 
     public function testReturn400IfNameIsMissing()
     {
-        $this->assertMatchesRegularExpression('/if\s*\(!isset\s*\(\s*\$input\s*\[\s*[\'"]name[\'"]\s*\]\s*\)\s*\)/', $this->code, "Harus ada pengecekan apakah input name tersedia");
-        $this->assertMatchesRegularExpression('/http_response_code\s*\(\s*400\s*\)/', $this->code, "Respon harus 400 jika name tidak tersedia");
-        $this->assertMatchesRegularExpression('/json_encode\s*\(\s*\[\s*"status"\s*=>\s*400\s*,\s*"error"\s*=>\s*"Invalid Input"\s*\]/', $this->code, "Harus ada pesan error 'Invalid Input' jika name tidak diberikan");
+        $this->assertMatchesRegularExpression('/if\s*\(!isset\s*\(\s*\$input\s*\[\s*[\'"]name[\'"]\s*\]\s*\)\s*\)/', $this->code, "There should be a check whether the input name is available");
+        $this->assertMatchesRegularExpression('/http_response_code\s*\(\s*400\s*\)/', $this->code, "Response must be 400 if name is not available");
+        $this->assertMatchesRegularExpression('/json_encode\s*\(\s*\[\s*"status"\s*=>\s*400\s*,\s*"error"\s*=>\s*"Invalid Input"\s*\]/', $this->code, "There should be an 'Invalid Input' error message if the name is not given");
     }
 
     public function testUpdateItemAndSave()
     {
-        $this->assertMatchesRegularExpression('/\$data\s*\[\s*\$id\s*\]\s*\[\s*[\'"]name[\'"]\s*\]\s*=\s*\$input\s*\[\s*[\'"]name[\'"]\s*\]\s*;/', $this->code, "Harus ada perintah untuk memperbarui name pada data");
-        $this->assertMatchesRegularExpression('/saveData\s*\(\s*\$data\s*\)/', $this->code, "Harus ada pemanggilan saveData setelah update");
+        $this->assertMatchesRegularExpression('/\$data\s*\[\s*\$id\s*\]\s*\[\s*[\'"]name[\'"]\s*\]\s*=\s*\$input\s*\[\s*[\'"]name[\'"]\s*\]\s*;/', $this->code, "There must be a command to update the name in the data");
+        $this->assertMatchesRegularExpression('/saveData\s*\(\s*\$data\s*\)/', $this->code, "There must be a saveData call after the update");
     }
 
     public function testReturn200IfUpdatedSuccessfully()
     {
-        $this->assertMatchesRegularExpression('/http_response_code\s*\(\s*200\s*\)/', $this->code, "Respon harus 200 jika update berhasil");
-        $this->assertMatchesRegularExpression('/json_encode\s*\(\s*\[\s*"status"\s*=>\s*200\s*,\s*"message"\s*=>\s*"Item Updated"\s*,\s*"produk"\s*=>\s*\$data\s*\[\s*\$id\s*\]\s*\]\s*\)/', $this->code, "Harus ada pesan 'Item Updated' setelah pembaruan");
+        $this->assertMatchesRegularExpression('/http_response_code\s*\(\s*200\s*\)/', $this->code, "Response must be 200 if the update was successful");
+        $this->assertMatchesRegularExpression('/json_encode\s*\(\s*\[\s*"status"\s*=>\s*200\s*,\s*"message"\s*=>\s*"Item Updated"\s*,\s*"produk"\s*=>\s*\$data\s*\[\s*\$id\s*\]\s*\]\s*\)/', $this->code, "There should be an 'Item Updated' message after the update");
     }
 
     public function testCodeExecutionOrder()
@@ -95,26 +95,26 @@ class Topic1UpdateTest extends Unit
         $response200Pos = strpos($this->code, 'http_response_code(200);');
 
         // Pastikan urutan eksekusi sesuai dengan logika bisnis
-        $this->assertNotFalse($headerPos, "Header harus ada");
-        $this->assertNotFalse($requirePos, "Require data.php harus ada");
-        $this->assertNotFalse($getDataPos, "Pemanggilan getData harus ada");
-        $this->assertNotFalse($getIdPos, "Pengambilan ID harus ada");
-        $this->assertNotFalse($inputParsePos, "Parsing JSON input harus ada");
-        $this->assertNotFalse($idCheckPos, "Pengecekan ID harus ada");
-        $this->assertNotFalse($nameCheckPos, "Pengecekan name harus ada");
-        $this->assertNotFalse($updatePos, "Update item harus ada");
-        $this->assertNotFalse($savePos, "Penyimpanan data harus ada");
-        $this->assertNotFalse($response200Pos, "Respon 200 harus ada setelah update");
+        $this->assertNotFalse($headerPos, "Header must exist");
+        $this->assertNotFalse($requirePos, "Require data.php must exist");
+        $this->assertNotFalse($getDataPos, "Fetching getData must exist");
+        $this->assertNotFalse($getIdPos, "ID retrieval must exist");
+        $this->assertNotFalse($inputParsePos, "JSON parsing must exist");
+        $this->assertNotFalse($idCheckPos, "ID check must exist");
+        $this->assertNotFalse($nameCheckPos, "Name check must exist");
+        $this->assertNotFalse($updatePos, "Update data must exist");
+        $this->assertNotFalse($savePos, "Save data must exist");
+        $this->assertNotFalse($response200Pos, "Response 200 must exist after update");
 
         // Pastikan urutan eksekusi sesuai
-        $this->assertTrue($headerPos < $requirePos, "Header harus sebelum require");
-        $this->assertTrue($requirePos < $getDataPos, "Require harus sebelum pemanggilan getData");
-        $this->assertTrue($getDataPos < $getIdPos, "getData harus sebelum pengambilan ID");
-        $this->assertTrue($getIdPos < $inputParsePos, "Pengambilan ID harus sebelum parsing input");
-        $this->assertTrue($inputParsePos < $idCheckPos, "Parsing input harus sebelum pengecekan ID");
-        $this->assertTrue($idCheckPos < $nameCheckPos, "Pengecekan ID harus sebelum pengecekan name");
-        $this->assertTrue($nameCheckPos < $updatePos, "Pengecekan name harus sebelum update data");
-        $this->assertTrue($updatePos < $savePos, "Update data harus sebelum penyimpanan");
-        $this->assertTrue($savePos < $response200Pos, "Penyimpanan harus sebelum respon 200");
+        $this->assertTrue($headerPos < $requirePos, "The header must be executed before require");
+        $this->assertTrue($requirePos < $getDataPos, "Require must be before the getData call");
+        $this->assertTrue($getDataPos < $getIdPos, "getData must be before ID retrieval");
+        $this->assertTrue($getIdPos < $inputParsePos, "ID retrieval must be before input parsing");
+        $this->assertTrue($inputParsePos < $idCheckPos, "Input parsing must be before ID checking");
+        $this->assertTrue($idCheckPos < $nameCheckPos, "ID checking must come before name checking");
+        $this->assertTrue($nameCheckPos < $updatePos, "Name checking must be done before data update");
+        $this->assertTrue($updatePos < $savePos, "Data update must be before storage");
+        $this->assertTrue($savePos < $response200Pos, "Saving data must be before 200 responses");
     }
 }

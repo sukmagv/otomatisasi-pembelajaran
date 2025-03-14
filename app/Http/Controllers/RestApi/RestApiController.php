@@ -104,17 +104,17 @@ class RestApiController extends Controller
     // Submit task to database
     public function submit_task(Request $request)
     {
-        // Validasi input
+        // Input validation
         $request->validate([
             'file' => 'required|file|max:2048|extensions:php,html',
             'comment' => 'nullable|string',
             'task_id' => 'required|exists:restapi_topic_tasks,id',
         ]);
 
-        DB::beginTransaction(); // Mulai transaksi
+        DB::beginTransaction(); // start database transaction
 
         try {
-            // Jika user mengupload file baru, upload file & update path
+            // If the user uploads a new file, upload the file & update the path
             if ($request->hasFile('file')) {
                 $file = $request->file('file');
                 $fileName = time() . '_' . $file->getClientOriginalName();
@@ -131,26 +131,26 @@ class RestApiController extends Controller
                 'updated_at' => Carbon::now(),
             ]);
 
-            // Commit jika tidak ada error
+            // Commit if success
             DB::commit();
 
-            // Update progress
+            // Progress calculation
             $this->getProgress();
 
-            // Ambil topic_id langsung dari relasi task
+            // Get topic ID
             $topicId = Task::where('id', $submission->task_id)->value('topic_id');
 
-            // Jalankan Codeception
+            // Run Codeception test
             $this->runCodeceptionTest($topicId, $filePath);
 
-            // Dapatkan hasil pengujian
+            // Get test result from codeception
             $testResult = $this->runCodeceptionTest($topicId, $filePath);
 
             return back()->with('success', 'Upload berhasil! Tes otomatis telah dijalankan.')
                      ->with('test_result', $testResult);
 
         } catch (\Exception $e) {
-            DB::rollBack(); // Jika ada error, rollback transaksi
+            DB::rollBack(); // rollback if failed
             return back()->with('error', 'Gagal menyimpan submission: ' . $e->getMessage());
         }
     }
@@ -174,7 +174,7 @@ class RestApiController extends Controller
         $testFile = $this->testFiles[$topicId];
         $submissionPath = public_path("storage/" . $filePath);
 
-        // Jalankan Codeception
+        // Run Codeception test
         $command = ['C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe', base_path('vendor/bin/codecept'), 'run', 'unit', $testFile];
         $process = new Process($command);
         $process->setTimeout(300);
@@ -182,13 +182,13 @@ class RestApiController extends Controller
         $process->setWorkingDirectory(base_path());
 
         try {
-            $process->mustRun(); // Pastikan proses berjalan dengan sukses
+            $process->mustRun(); // Ensure the process runs successfully
             $output = $process->getOutput();
         } catch (\Exception $e) {
             $output = "Gagal menjalankan Codeception: " . ($e->getMessage() ?: $process->getErrorOutput());
         }
 
-        // Simpan hasil ke session agar bisa diakses di Blade
+        // Save test result to session
         Session::put('test_result', $output);
 
         return $output;

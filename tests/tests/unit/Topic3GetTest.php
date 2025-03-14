@@ -11,63 +11,63 @@ class Topic1GetTest extends Unit
 
     protected function _before()
     {
-        // Ambil path file dari environment variable atau CLI
+        // Retrieve the file path of the environment variable sent from the CLI
         $this->filePath = $_SERVER['testFile'] ?? $_ENV['testFile'] ?? null;
-
-        // Pastikan path file diberikan
-        $this->assertNotEmpty($this->filePath, "Path file harus diberikan sebagai argument --testFile");
-
-        // Pastikan file ada
-        $this->assertFileExists($this->filePath, "File yang diuji harus ada");
-
-        // Ambil isi file sebagai string
+    
+        // Make sure the file path is given
+        $this->assertNotEmpty($this->filePath, "The file path must be given as the --testFile argument");
+    
+        // Make sure the file exists
+        $this->assertFileExists($this->filePath, "Tested files must be present");
+    
+        // Retrieve file contents as a string
         $this->code = file_get_contents($this->filePath);
     }
 
     public function testValidPHPCode()
     {
         $tokens = token_get_all($this->code);
-        $this->assertNotEmpty($tokens, "Kode PHP harus valid tanpa error sintaks");
+        $this->assertNotEmpty($tokens, "PHP code must be valid without syntax errors");
     }
 
     public function testHeaderJsonOutput()
     {
-        $this->assertMatchesRegularExpression('/header\s*\(\s*"Content-Type:\s*application\/json"\s*\)/', $this->code, "Header harus mengatur output sebagai JSON");
+        $this->assertMatchesRegularExpression('/header\s*\(\s*"Content-Type:\s*application\/json"\s*\)/', $this->code, "The header should set the output as JSON");
     }
 
     public function testRequireDataFile()
     {
-        $this->assertMatchesRegularExpression('/require\s+"data.php"/', $this->code, "Harus ada 'require \"data.php\"' untuk mengambil fungsi getData");
+        $this->assertMatchesRegularExpression('/require\s+"data.php"/', $this->code, "There must be a 'require \“data.php\”' to retrieve the getData and saveData functions");
     }
 
     public function testGetDataFunctionCall()
     {
-        $this->assertMatchesRegularExpression('/\$data\s*=\s*getData\s*\(\s*\)/', $this->code, "Harus ada pemanggilan getData untuk mengambil data");
+        $this->assertMatchesRegularExpression('/\$data\s*=\s*getData\s*\(\s*\)/', $this->code, "There must be a getData call to retrieve the data");
     }
 
     public function testGetIdRetrieval()
     {
-        $this->assertMatchesRegularExpression('/\$id\s*=\s*isset\s*\(\s*\$_GET\s*\[\s*[\'"]id[\'"]\s*\]\s*\)\s*\?/', $this->code, "Harus ada pengecekan isset pada \$_GET['id']");
+        $this->assertMatchesRegularExpression('/\$id\s*=\s*isset\s*\(\s*\$_GET\s*\[\s*[\'"]id[\'"]\s*\]\s*\)\s*\?/', $this->code, "There must be an isset check on \$_GET['id']");
     }
 
     public function testReturnAllDataWhenIdIsNull()
     {
-        $this->assertMatchesRegularExpression('/if\s*\(\s*is_null\s*\(\s*\$id\s*\)\s*\)/', $this->code, "Harus ada pengecekan apakah ID null");
-        $this->assertMatchesRegularExpression('/http_response_code\s*\(\s*200\s*\)/', $this->code, "Respon harus 200 jika ID null");
-        $this->assertMatchesRegularExpression('/json_encode\s*\(\s*\[\s*"status"\s*=>\s*200\s*,\s*"data"\s*=>\s*array_values\s*\(\s*\$data\s*\)/', $this->code, "Harus mengembalikan seluruh data jika ID null");
+        $this->assertMatchesRegularExpression('/if\s*\(\s*is_null\s*\(\s*\$id\s*\)\s*\)/', $this->code, "There must be a check whether the ID is null");
+        $this->assertMatchesRegularExpression('/http_response_code\s*\(\s*200\s*\)/', $this->code, "Response must be 200 if ID is null");
+        $this->assertMatchesRegularExpression('/json_encode\s*\(\s*\[\s*"status"\s*=>\s*200\s*,\s*"data"\s*=>\s*array_values\s*\(\s*\$data\s*\)/', $this->code, "Must return all data if ID is null");
     }
 
     public function testReturnSingleItemIfExists()
     {
-        $this->assertMatchesRegularExpression('/if\s*\(\s*isset\s*\(\s*\$data\s*\[\s*\$id\s*\]\s*\)\s*\)/', $this->code, "Harus ada pengecekan apakah ID ada di data");
-        $this->assertMatchesRegularExpression('/http_response_code\s*\(\s*200\s*\)/', $this->code, "Respon harus 200 jika item ditemukan");
-        $this->assertMatchesRegularExpression('/json_encode\s*\(\s*\[\s*"status"\s*=>\s*200\s*,\s*"data"\s*=>\s*\$data\s*\[\s*\$id\s*\]\s*\]/', $this->code, "Harus mengembalikan data jika ID ditemukan");
+        $this->assertMatchesRegularExpression('/if\s*\(\s*isset\s*\(\s*\$data\s*\[\s*\$id\s*\]\s*\)\s*\)/', $this->code, "There should be a check if the ID is in the data");
+        $this->assertMatchesRegularExpression('/http_response_code\s*\(\s*200\s*\)/', $this->code, "Response should be 200 if the item is found");
+        $this->assertMatchesRegularExpression('/json_encode\s*\(\s*\[\s*"status"\s*=>\s*200\s*,\s*"data"\s*=>\s*\$data\s*\[\s*\$id\s*\]\s*\]/', $this->code, "Must return data if ID is found");
     }
 
     public function testReturn404IfItemNotFound()
     {
-        $this->assertMatchesRegularExpression('/http_response_code\s*\(\s*404\s*\)/', $this->code, "Respon harus 404 jika item tidak ditemukan");
-        $this->assertMatchesRegularExpression('/json_encode\s*\(\s*\[\s*"status"\s*=>\s*404\s*,\s*"error"\s*=>\s*"Item Not Found"\s*\]/', $this->code, "Harus ada pesan error 'Item Not Found' jika ID tidak ditemukan");
+        $this->assertMatchesRegularExpression('/http_response_code\s*\(\s*404\s*\)/', $this->code, "Response should be 404 if item not found");
+        $this->assertMatchesRegularExpression('/json_encode\s*\(\s*\[\s*"status"\s*=>\s*404\s*,\s*"error"\s*=>\s*"Item Not Found"\s*\]/', $this->code, "There should be an 'Item Not Found' error message if the ID is not found");
     }
 
     public function testCodeExecutionOrder()
@@ -81,30 +81,30 @@ class Topic1GetTest extends Unit
         $response404Pos = strpos($this->code, 'http_response_code(404);');
 
         // Pastikan urutan eksekusi sesuai dengan logika bisnis
-        $this->assertNotFalse($headerPos, "Header harus ada");
-        $this->assertNotFalse($requirePos, "Require data.php harus ada");
-        $this->assertNotFalse($getDataPos, "Pemanggilan getData harus ada");
-        $this->assertNotFalse($getIdPos, "Pengambilan ID harus ada");
-        $this->assertNotFalse($nullCheckPos, "Pengecekan ID null harus ada");
-        $this->assertNotFalse($existsCheckPos, "Pengecekan apakah ID ada harus ada");
-        $this->assertNotFalse($response404Pos, "Respon 404 harus ada jika item tidak ditemukan");
+        $this->assertNotFalse($headerPos, "Header must exist");
+        $this->assertNotFalse($requirePos, "Require data.php must exist");
+        $this->assertNotFalse($getDataPos, "getData call must exist");
+        $this->assertNotFalse($getIdPos, "ID retrieval must exist");
+        $this->assertNotFalse($nullCheckPos, "ID null check must exist");
+        $this->assertNotFalse($existsCheckPos, "ID exists check must exist");
+        $this->assertNotFalse($response404Pos, "Response 404 must exist if item not found");
 
         // Pastikan urutan eksekusi sesuai
-        $this->assertTrue($headerPos < $requirePos, "Header harus sebelum require");
-        $this->assertTrue($requirePos < $getDataPos, "Require harus sebelum pemanggilan getData");
-        $this->assertTrue($getDataPos < $getIdPos, "getData harus sebelum pengambilan ID");
-        $this->assertTrue($getIdPos < $nullCheckPos, "Pengambilan ID harus sebelum pengecekan null");
-        $this->assertTrue($nullCheckPos < $existsCheckPos, "Pengecekan null harus sebelum pengecekan apakah item ada");
-        $this->assertTrue($existsCheckPos < $response404Pos, "Pengecekan apakah item ada harus sebelum response 404");
+        $this->assertTrue($headerPos < $requirePos, "The header must be executed before require");
+        $this->assertTrue($requirePos < $getDataPos, "Require must be before the getData call");
+        $this->assertTrue($getDataPos < $getIdPos, "getData must be before ID retrieval");
+        $this->assertTrue($getIdPos < $nullCheckPos, "ID retrieval must be before null checking");
+        $this->assertTrue($nullCheckPos < $existsCheckPos, "Null checking must come before checking whether the item exists");
+        $this->assertTrue($existsCheckPos < $response404Pos, "Checking whether the item exists must be before response 404");
     }
 
     public function testTypoCheck()
     {
         // Pastikan tidak ada kesalahan ketik umum
-        $this->assertStringContainsString('header("Content-Type: application/json");', $this->code, "Header JSON harus ditulis dengan benar");
-        $this->assertStringContainsString('require "data.php";', $this->code, "Require file data.php harus ada");
-        $this->assertStringContainsString('function getData()', $this->code, "Fungsi getData harus ada");
-        $this->assertStringContainsString('json_decode', $this->code, "Harus ada penggunaan json_decode jika diperlukan");
-        $this->assertStringContainsString('json_encode', $this->code, "Harus ada penggunaan json_encode");
+        $this->assertStringContainsString('header("Content-Type: application/json");', $this->code, "JSON headers must be written correctly");
+        $this->assertStringContainsString('require "data.php";', $this->code, "Require file data.php must exist");
+        $this->assertStringContainsString('function getData()', $this->code, "The getData function must exist");
+        $this->assertStringContainsString('json_encode', $this->code, "There must be a json_encode call");
+        $this->assertStringContainsString('json_decode', $this->code, "There must be a json_decode call");
     }
 }
