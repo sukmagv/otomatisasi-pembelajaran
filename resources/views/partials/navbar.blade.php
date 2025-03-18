@@ -66,6 +66,14 @@
           <!-- FORM -->
           <form action="{{route('login')}}" method="post">
             @csrf
+
+            @if(session('error'))
+                <script>alert("{{ session('error') }}");</script>
+            @endif
+            @if(session('success'))
+                <script>alert("{{ session('success') }}");</script>
+            @endif
+            
             <div class="form-modal">
               <label for="email" class="form-label" style="text-align: left; font-weight: 500">Email</label>
               <input class="form-control" list="datalistOptions" id="email" placeholder="Email" name="email" style=" margin-bottom: 20px;">

@@ -76,6 +76,13 @@
         <p style="text-align: center; font-size: 30px; font-weight: bold; color: #1466C2; ">Create New Account</p>
         <form action="{{ route('post_signup') }}" method="post" onsubmit="return validateForm()">
             @csrf
+            @if(session('error'))
+                <script>alert("{{ session('error') }}");</script>
+            @endif
+            @if(session('success'))
+                <script>alert("{{ session('success') }}");</script>
+            @endif
+            
             <label for="name" class="form-label">Name</label>
             <input class="form-control" list="datalistOptions" id="name" placeholder="Name" name="name">
 

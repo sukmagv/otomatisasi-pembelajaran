@@ -40,7 +40,7 @@ class AuthController extends Controller
 
         } else {
 
-            echo "okee err";
+            return redirect()->back()->with('error', 'Email atau password salah');
         }
     }
 
@@ -53,6 +53,11 @@ class AuthController extends Controller
             'role' => 'required',
 
         ]);
+
+        if (User::where('email', $data['email'])->exists()) {
+            return redirect()->back()->with('error', 'Email sudah digunakan. Silakan gunakan email lain.');
+        }
+
         $data['password'] = bcrypt($data['password']);
         User::create($data);
 
