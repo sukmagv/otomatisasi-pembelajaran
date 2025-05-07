@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\RestApi;
 
 use Carbon\Carbon;
+use Barryvdh\DomPDF\PDF;
 use App\Models\RestApi\Task;
 use Illuminate\Http\Request;
 use App\Models\RestApi\Topic;
@@ -190,5 +191,56 @@ class TeacherController extends Controller
         $task->delete();
 
         return back()->with('success', 'Task deleted successfully!');
+    }
+
+    // Export PDF
+    public function exportPDF(Request $request)
+    {
+        // Get user ID
+        $user = $request->query('user_id');
+        // Ambil semua submission yang memiliki file_path
+        $submissions = Submission::with(['user', 'task.topic', 'feedback'])
+            ->where('user_id', $user)
+            ->whereNotNull('submit_path') // Hanya yang memiliki file
+            ->latest()
+            ->limit(1)
+            ->get();
+            
+        // Array untuk menyimpan isi file PHP
+        $filesContent = [];
+
+        foreach ($submissions as $submission) {
+            $filePath = "public/" . $submission->submit_path; // Sesuaikan path
+
+            // Gunakan Storage untuk mengecek apakah file ada
+            if (!Storage::exists($filePath)) {
+                continue; // Lewati jika file tidak ditemukan
+            }
+
+            // Baca isi file PHP dari Storage
+            $fileContent = Storage::get($filePath);
+            
+            // Escape HTML agar kode PHP tidak dieksekusi di PDF
+            $escapedCode = htmlspecialchars_decode($fileContent);
+
+            // Pastikan semua data tersedia sebelum dimasukkan ke array
+            $filesContent[] = [
+                'user_name'    => $submission->user->name ?? 'No Name',
+                'user_email'   => $submission->user->email ?? 'No Email',
+                'task_title'   => $submission->task->title ?? 'No Task',
+                'topic_title'  => $submission->task->topic->title ?? 'No Topic',
+                'topic_desc'   => $submission->task->topic->description ?? 'No Description',
+                'code'         => $escapedCode,
+                'test_result'  => $submission->feedback->test_result ?? 'No Test Result',
+                'updated_at'   => $submission->updated_at->format('Y-m-d H:i:s')
+            ];
+        }
+        
+        // Load view PDF
+        $pdf = app('dompdf.wrapper');
+        $pdf->loadView('restapi.teacher.pdf', compact('filesContent'));
+
+        // Stream PDF dengan nama berdasarkan user pertama dalam data
+        return $pdf->stream('submission.pdf');
     }
 }

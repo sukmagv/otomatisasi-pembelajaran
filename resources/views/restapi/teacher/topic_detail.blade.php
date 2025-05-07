@@ -202,12 +202,7 @@
             <p class="text-list" style="font-size: 20px; font-weight: 600;">
                 Task List
             </p>
-        </div>        
-
-        <div class="progress-container">
-            <div id="progressbar" style="width: {{ session('progress', 0) }}%;"></div>
         </div>
-        <div id="progress">{{ session('progress', 0) }}%</div>
         
         <div class="accordion" id="topicsAccordion" style="margin-top: 20px;">
             @foreach($topics as $topic)
@@ -243,7 +238,7 @@
                                         @endphp
                                         <li class="list-group-item border-0 d-flex align-items-center">
                                             <!-- Link sebagai pengganti radio button -->
-                                            <a href="{{ route('restapi_topic_detail', ['id' => $topic->id, 'task_id' => $taskItem->id]) }}" 
+                                            <a href="{{ route('restapi_open_task', ['id' => $topic->id, 'task_id' => $taskItem->id]) }}" 
                                                class="d-flex align-items-center text-decoration-none" style="color: inherit;">
                                                 <!-- Radio-style effect -->
                                                 <span class="form-check me-2">
@@ -277,8 +272,6 @@
         </div>
     </div>
     
-
-    @if($user->role == 'teacher')
     <div style="padding: 20px; max-width: 68%; margin-left:5px;">
         <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px;margin-bottom:40px">
         <!-- <a href="{{ asset('/storage/private/febri syawaldi/febri syawaldi_db_conn.php') }}" download>Download File</a>
@@ -299,8 +292,12 @@
                         <tr>
                             <td>{{ $item->user?->name }}</td>
                             <td>{{ \Carbon\Carbon::parse($item->created_at)->translatedFormat('l, d F Y H:i') }}</td>
-                            <td><a href="{{ asset( $item->submit_path ) }}" download="" class="btn btn-primary">Download File</a></td>
-                            <!-- Add more table cells as needed -->
+                            <td>
+                                <a href="{{ route('restapi_export_pdf', ['user_id' => $item->user->id]) }}" 
+                                   class="btn btn-primary" target="_blank">
+                                   Download File
+                                </a>
+                            </td>                            
                         </tr>
                     @endforeach
                 </tbody>
@@ -308,9 +305,6 @@
 
         </div>
     </div>
-    @else
-        
-    @endif
 
     <!-- Footer -->
     <footer class="text-center p-2 fixed-bottom" style="background-color: #EAEAEA; color: #636363; width: 100%;">

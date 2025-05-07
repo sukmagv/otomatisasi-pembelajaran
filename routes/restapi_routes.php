@@ -24,5 +24,6 @@ Route::group(['middleware' => ['auth', 'teacher']], function() {
         Route::post('/add-task', [TeacherController::class, 'addTask'])->name('restapi_add_task');
         Route::post('/update-task', [TeacherController::class, 'updateTask'])->name('restapi_update_task');
         Route::post('/delete-task', [TeacherController::class, 'deleteTask'])->name('restapi_delete_task');
+        Route::get('/export-pdf', [TeacherController::class, 'exportPdf'])->name('restapi_export_pdf');
     });
 });
