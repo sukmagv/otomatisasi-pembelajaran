@@ -20,6 +20,11 @@ class Topic extends Model
 
     public function tasks()
     {
-        return $this->hasMany(Task::class);
+        return $this->hasMany(Task::class, 'topic_id');
+    }
+
+    public function firstTask()
+    {
+        return $this->hasOne(Task::class, 'topic_id')->where('order_number', 1);
     }
 }

@@ -26,4 +26,9 @@ class Task extends Model
     {
         return $this->belongsTo(Topic::class);
     }
+
+    public function submissions()
+    {
+        return $this->hasMany(Submission::class, 'task_id', 'id');
+    }
 }
