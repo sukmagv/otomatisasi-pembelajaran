@@ -39,6 +39,7 @@
         <p><strong>Submitted by:</strong> {{ $file['user_name'] }} ({{ $file['user_email'] }})</p>
         <p><strong>Updated At:</strong> {{ $file['updated_at'] }}</p>
         <p><strong>Topic Description:</strong> {{ $file['topic_desc'] }}</p>
+        <p><strong>Submit Count:</strong> {{ $file['submit_count'] }}</p>
         <h4>Submitted Code:</h4>
         <pre>{{ $file['code'] }}</pre>
         <p><strong>Test Result:</strong></p>

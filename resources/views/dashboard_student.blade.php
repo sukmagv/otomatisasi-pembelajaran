@@ -291,7 +291,7 @@
                             <img src="{{asset("./images/book.png ")}}" style="width: 13px; height: 16px;">
                         </div>
                         <div class="col">
-                            <p>6 learning topics</p>
+                            <p>5 learning topics</p>
                         </div>
                     </div>
                     <div style="margin-top: auto;">

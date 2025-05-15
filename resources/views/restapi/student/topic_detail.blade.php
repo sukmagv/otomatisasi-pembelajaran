@@ -191,7 +191,7 @@
     <nav class="navbar navbar-light bg-light" style="padding: 15px 20px; border-bottom: 1px solid #E4E4E7; font-family: 'Poppins', sans-serif;">
         <a class="navbar-brand" href="{{ route('restapi_student') }}">
             <img src="{{ asset('images/left-arrow.png') }}" style="height: 24px; margin-right: 10px;">
-            {{ $row->title; }}
+            {{ $row->title }}
         </a>
     </nav> 
 
@@ -268,9 +268,9 @@
     </div>
 
     <div style="padding: 20px; max-width: 68%; margin-left:5px;">
-        <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px; margin-bottom:40px">
-            @if($pdf_reader == 1 && $taskWithFile)
-            <iframe src="{{ url('storage/' . $taskWithFile->file_path) }}" style="width: 100%; height: 510px;"></iframe>
+        <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px; margin-bottom:10px">
+            @if($pdf_reader == 1 && $activeTask)
+            <iframe src="{{ url('storage/' . $activeTask->file_path) }}" style="width: 100%; height: 510px;"></iframe>
             @else
                 <p class="text-muted">No PDF available for this topic.</p>
             @endif
@@ -279,66 +279,64 @@
     
     @if($activeTask && $activeTask->flag == 1)
 
-    <div style="padding: 20px; max-width: 68%; margin-left:5px;">
+    <div style="padding: 20px; max-width: 68%; margin-left:5px; margin-top: -20px;">
         <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px;margin-bottom:40px">
             <div style="padding-top: 15px; padding-bottom: 15px">
                 <p class='text-list' style='font-size: 24px; font-weight: 600;width: 400px !important;'> Upload File Practicum </p>
                 <div class="texts" style="position: relative;">
+                    {{-- Upload + Verify Form --}}
                     <form action="{{ Route('restapi_submit_task') }}" method="POST" enctype="multipart/form-data">
                         {{ csrf_field() }}
-    
-                        {{-- ID Topik sebagai input hidden --}}
-                        {{-- <input type="hidden" name="id" value="{{ old('id', request()->query('id')) }}"> --}}
                         <input type="hidden" name="task_id" value="{{ old('task_id', request()->query('task_id')) }}">
-    
-                        {{-- Tampilkan File yang Sudah Diupload --}}
+
+                        {{-- Show Uploaded File --}}
                         @if($submission && $submission->submit_path)
-                            <div class="form-group" style="margin-bottom: 20px">
-                                <label for="file">Uploaded File:</label><br>
-                                <a href="{{ asset('storage/' . $submission->submit_path) }}" target="_blank">
+                            <div class="form-group mb-3">
+                                <label>Uploaded File:</label><br>
+                                <a href="{{ request()->fullUrlWithQuery(['view_file' => true]) }}" target="_blank">
                                     {{ basename($submission->submit_path) }}
                                 </a>
                             </div>
                         @endif
-    
-                        {{-- Input untuk file baru (opsional jika sudah ada) --}}
-                        <div class="form-group">
+
+                        {{-- Upload New File --}}
+                        <div class="form-group mb-3">
                             <label for="file">Upload New Evidence</label>
-                            <input type="file" name="file" class="form-control" {{ $submission ? '' : 'required' }}>
+                            <input 
+                                type="file" 
+                                name="file" 
+                                class="form-control" 
+                                placeholder="{{ $submission ? basename($submission->submit_path) : 'Choose .php or .html file' }}"
+                                {{ $submission ? '' : 'required' }}
+                            >
                             <small>Enter the work results <code>.php | .html</code> (Max: 2MB)</small>
                         </div>
-    
-                        <br />
-    
-                        {{-- Tampilkan Komentar Sebelumnya --}}
+
+                        {{-- Comment --}}
                         @if($submission && $submission->submit_comment)
-                            <div class="form-group">
+                            <div class="form-group mb-3">
                                 <label>Previous Comment:</label>
                                 <p class="text-muted">{{ $submission->submit_comment }}</p>
                             </div>
                         @endif
-    
-                        {{-- Input untuk komentar baru --}}
-                        <div class="form-group">
+
+                        <div class="form-group mb-3">
                             <label for="comment">New Comment (Optional)</label>
                             <textarea class="form-control" name="comment" placeholder="(Optional) Add a comment..."></textarea>
                         </div>
-    
-                        <br />
-    
-                        {{-- Tombol Submit --}}
-                        <div class="form-group">
-                            <input type="submit" value="Upload" class="btn btn-primary">
+
+                        <div class="form-group d-flex" style="gap: 10px; margin-bottom: 20px;">
+                            <button type="submit" class="btn btn-primary">Upload</button>
                         </div>
-    
-                        {{-- Pesan sukses jika berhasil --}}
+
+                        {{-- Success Message --}}
                         @if (session('success'))
                             <div class="alert alert-success mt-3">
                                 {{ session('success') }}
                             </div>
                         @endif
-    
-                        {{-- Tampilkan error jika ada masalah --}}
+
+                        {{-- Error Message --}}
                         @if ($errors->any())
                             <div class="alert alert-danger mt-3">
                                 <ul>
@@ -348,14 +346,25 @@
                                 </ul>
                             </div>
                         @endif
-
-                        @if(session('test_result'))
-                            <div class="alert alert-info">
-                                <h3><b>Hasil Pengujian:</b></h3>
-                                <pre>{{ session('test_result') }}</pre>
-                            </div>
-                        @endif
                     </form>
+
+                    <form action="{{ route('restapi_verify') }}" method="POST" style="display: inline;">
+                        {{-- Verify Form --}}
+                        {{ csrf_field() }}
+                        @csrf
+                        <input type="hidden" name="task_id" value="{{ old('task_id', request()->query('task_id')) }}">
+                        <button type="submit" class="btn btn-success">
+                            Verify
+                        </button>
+                    </form>
+
+                    {{-- Feedback Section --}}
+                    @if(session('test_result') || $testResult)
+                        <div class="alert alert-danger mt-3">
+                            <h5><b>Feedback:</b></h5>
+                            <pre>{{ session('test_result') ?? $testResult }}</pre>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -449,6 +458,7 @@
         $(document).ready(function() {
             getProgress();
         });
+
     </script>
 </body>
 

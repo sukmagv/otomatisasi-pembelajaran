@@ -9,7 +9,8 @@
     "license": "MIT",
     "require": {
         "php": "^8.1",
-        "guzzlehttp/guzzle": "^7.2",
+        "barryvdh/laravel-dompdf": "^3.1",
+        "guzzlehttp/guzzle": "^7.9",
         "laravel/framework": "^10.10",
         "laravel/sanctum": "^3.2",
         "laravel/socialite": "^5.13",
@@ -24,6 +25,7 @@
         "codeception/module-db": "^3.2",
         "codeception/module-laravel": "^3.2",
         "codeception/module-phpbrowser": "*",
+        "codeception/module-rest": "*",
         "fakerphp/faker": "^1.9.1",
         "laravel/pint": "^1.0",
         "laravel/sail": "^1.18",

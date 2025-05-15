@@ -242,7 +242,7 @@
                                                     <th>No</th>
                                                     <th>Topic ID</th>
                                                     <th>Title</th>
-                                                    <th>Order Number</th>
+                                                    <th>Type</th>
                                                     <th>Need Submission</th>
                                                     <th>Actions</th>
                                                 </tr>
@@ -253,7 +253,7 @@
                                                     <td>{{ $index + 1 }}</td>
                                                     <td>{{ $task->topic_id }}</td>
                                                     <td>{{ $task->title }}</td>
-                                                    <td>{{ $task->order_number }}</td>
+                                                    <td>{{ $task->order_number == 1 ? 'Praktikum' : "Latihan Soal" }}</td>
                                                     <td>{{ $task->flag == 1 ? 'Yes' : 'No' }}</td>
                                                     <td class="text-center">
                                                         <!-- Tombol Open -->
@@ -381,8 +381,30 @@
                             </select>
                             <label for="addTaskTitle" class="form-label">Title</label>
                             <input type="text" class="form-control" id="addTaskTitle" name="title" required>
-                            <label for="addTaskOrder" class="form-label">Order Number</label>
-                            <input type="number" class="form-control" id="addTaskOrder" name="order_number" required>  
+                            @php
+                                // Group existing order numbers by topic
+                                $orderUsedByTopic = [];
+
+                                foreach ($tasks as $task) {
+                                    $orderUsedByTopic[$task->topic_id][] = $task->order_number;
+                                }
+
+                                // Get selected topic (if previously submitted)
+                                $selectedTopicId = old('topic_id');
+                            @endphp
+                            <label for="addTaskOrder" class="form-label">Select Type</label>
+                            <select class="form-control" id="addTaskOrder" name="order_number" required>
+                                <option value="">-- Select Order --</option>
+                                @for($i = 1; $i <= 2; $i++)
+                                    <option value="{{ $i }}"
+                                        @if(isset($orderUsedByTopic[$selectedTopicId]) && in_array($i, $orderUsedByTopic[$selectedTopicId]))
+                                            disabled
+                                        @endif
+                                    >
+                                        {{ $i == 1 ? '1 - Praktikum' : '2 - Task' }}
+                                    </option>
+                                @endfor
+                            </select>
                             <label for="addTaskFlag" class="form-label">Need Submission?</label>
                             <select class="form-control" id="addTaskFlag" name="flag" required>
                                 <option value="1">Yes</option>
@@ -421,8 +443,30 @@
                             </select>
                             <label for="editTaskTitle" class="form-label">Title</label>
                             <input type="text" class="form-control" id="editTaskTitle" name="title" required>
-                            <label for="editTaskOrder" class="form-label">Order Number</label>
-                            <input type="number" class="form-control" id="editTaskOrder" name="order_number" required>  
+                            @php
+                                $currentTaskId = old('id'); // ini dikirim lewat hidden input
+                                $currentTopicId = old('topic_id');
+
+                                // Ambil task lain selain task ini
+                                $otherTasks = $tasks->where('id', '!=', $currentTaskId);
+
+                                // Ambil order_number yang dipakai oleh task lain dalam topic yang sama
+                                $usedOrders = $otherTasks->where('topic_id', $currentTopicId)->pluck('order_number')->toArray();
+                            @endphp
+                            <label for="editTaskOrder" class="form-label">Select Type</label>
+                            <select class="form-control" id="editTaskOrder" name="order_number" required>
+                                <option value="">-- Select Order --</option>
+                                @for ($i = 1; $i <= 2; $i++)
+                                    @php
+                                        // Jika ini nilai yang sedang dipakai task yang diedit, biarkan tetap aktif
+                                        $selected = old('order_number') == $i ? 'selected' : '';
+                                        $isDisabled = in_array($i, $usedOrders) && old('order_number') != $i;
+                                    @endphp
+                                    <option value="{{ $i }}" {{ $selected }} {{ $isDisabled ? 'disabled' : '' }}>
+                                        {{ $i == 1 ? '1 - Praktikum' : '2 - Task' }}
+                                    </option>
+                                @endfor
+                            </select>
                             <label for="editTaskFlag" class="form-label">Need Submission?</label>
                             <select class="form-control" id="editTaskFlag" name="flag" required>
                                 <option value="1">Yes</option>

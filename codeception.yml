@@ -12,31 +12,20 @@ extensions:
         - Codeception\Extension\RunFailed
 
 suites:
-    unit:
-        path: tests/unit
+    Api:
+        actor: ApiTester
+        modules:
+            enabled:
+                - Laravel
+                - REST:
+                    url: 'http://localhost/iclop/public'
+                    depends: PhpBrowser
+                - Asserts
+    Unit:
         actor: UnitTester
         modules:
             enabled:
+                - Laravel:
+                    database: false
+                    cleanup: true
                 - Asserts
-                - \Codeception\Module\Laravel
-    functional:
-        path: tests/functional
-        actor: FunctionalTester
-        modules:
-            enabled:
-                - \Codeception\Module\Laravel
-                - \Codeception\Module\Db:
-                    dsn: 'mysql:host=127.0.0.1;dbname=iclop'
-                    user: 'root'
-                    password: ''
-                    dump: 'tests/_data/dump.sql'
-                    populate: true
-                    cleanup: false
-    acceptance:
-        path: tests/acceptance
-        actor: AcceptanceTester
-        modules:
-            enabled:
-                - PhpBrowser:
-                    url: 'http://127.0.0.1:8000'
-                - \Codeception\Module\Laravel

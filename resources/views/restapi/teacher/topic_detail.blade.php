@@ -272,7 +272,7 @@
         </div>
     </div>
     
-    <div style="padding: 20px; max-width: 68%; margin-left:5px;">
+    <div style="padding: 20px; max-width: 68%; margin-left:5px; margin-top: -20px;">
         <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px;margin-bottom:40px">
         <!-- <a href="{{ asset('/storage/private/febri syawaldi/febri syawaldi_db_conn.php') }}" download>Download File</a>
         <a href="{{public_path('storage/private/febri syawaldi/febri syawaldi_db_conn.php')}}" download>Click me</a> -->
@@ -293,9 +293,9 @@
                             <td>{{ $item->user?->name }}</td>
                             <td>{{ \Carbon\Carbon::parse($item->created_at)->translatedFormat('l, d F Y H:i') }}</td>
                             <td>
-                                <a href="{{ route('restapi_export_pdf', ['user_id' => $item->user->id]) }}" 
-                                   class="btn btn-primary" target="_blank">
-                                   Download File
+                                <a href="{{ route('restapi_export_pdf', ['user_id' => $item->user->id, 'task_id' => $item->task->id]) }}" 
+                                class="btn btn-primary" target="_blank">
+                                Download File
                                 </a>
                             </td>                            
                         </tr>

@@ -2,17 +2,20 @@
 
 namespace App\Http\Controllers\RestApi;
 
-// use App\Models\PHP\Topic;
 use Carbon\Carbon;
 use App\Models\RestApi\Task;
 use Illuminate\Http\Request;
 use App\Models\RestApi\Topic;
+use App\Models\RestApi\Feedback;
 use App\Models\RestApi\Submission;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 use Symfony\Component\Process\Process;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 
 class RestApiController extends Controller
@@ -37,7 +40,6 @@ class RestApiController extends Controller
 
         // Get ID from URL parameter
         $topic_id = (int) $request->query('id');
-
         $task_id = (int) $request->query('task_id');
         
         // Get topic details
@@ -52,17 +54,40 @@ class RestApiController extends Controller
         $tasks = Task::all()->groupBy('topic_id');
 
         // Search file in tasks table by ID topic
-        $taskWithFile = $result->tasks->firstWhere('file_path', '!=', null);
-
+        $taskWithFile = $result->tasks->where('file_path', '!=', null);
         $pdf_reader = $taskWithFile ? 1 : 0;
+        $activeTask = $tasks[$topic_id]->firstWhere('id', $task_id) ?? null;
 
-        $activeTask = $tasks[$topic_id]->firstWhere('id', $request->query('task_id')) ?? null;
+        // Get lastest submission data by user ID and task ID
+        $submission = null;
+        if ($task_id && $activeTask) {
+            $submission = Submission::where('user_id', $user->id)
+                ->where('task_id', $task_id)
+                ->latest()
+                ->first();
+    
+            $testResult = null;
+            if ($submission) {
+                $testResult = Feedback::where('submission_id', $submission->id)
+                    ->latest()
+                    ->value('test_result');
+                if ($submission->submit_path) {
+                    $fullPath = storage_path('app/public/' . $submission->submit_path);
+                    if (file_exists($fullPath)) {
+                        $fileContent = file_get_contents($fullPath);
+                    }
+                }
+            }
+            $viewFile = $request->query('view_file');
+            if ($viewFile && $submission && $submission->submit_path) {
+                $fullPath = storage_path('app/public/' . $submission->submit_path);
+                if (file_exists($fullPath)) {
+                    $content = file_get_contents($fullPath);
+                    return response($content)->header('Content-Type', 'text/plain');
+                }
+            }
 
-        // Ambil submission terakhir untuk user dan task tertentu
-        $submission = Submission::where('user_id', auth()->id())
-            ->where('task_id', $task_id)
-            ->latest()
-            ->first();
+        }
 
         return view('restapi.student.topic_detail', [
             'row' => $result,
@@ -75,7 +100,8 @@ class RestApiController extends Controller
             'activeTask' => $activeTask,
             'topicsCount' => $topicsCount,
             'submission' => $submission,
-            // 'output' => $output,
+            'testResult' => $testResult ?? null,
+            'fileContent' => $fileContent ?? null,
         ]);
     }
 
@@ -84,7 +110,7 @@ class RestApiController extends Controller
         // Get user ID
         $userId = auth()->id();
 
-        // Count all topics (total tasks in database)
+        // Count all topics
         $totalTasks = Task::count();
 
         // Count unique submitted tasks by user
@@ -114,40 +140,47 @@ class RestApiController extends Controller
         DB::beginTransaction(); // start database transaction
 
         try {
-            // If the user uploads a new file, upload the file & update the path
-            if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $fileName = time() . '_' . $file->getClientOriginalName();
-                $filePath = $file->storeAs('restapi/submissions', $fileName, 'public');
+            // Get submission by user ID and task ID
+            $submission = Submission::where('user_id', auth()->id())
+                ->where('task_id', $request->task_id)
+                ->first();
+
+            // If submission already exists, delete the old file
+            if ($submission && $submission->submit_path && Storage::disk('public')->exists($submission->submit_path)) {
+                Storage::disk('public')->delete($submission->submit_path);
             }
 
-            // Save submit data to database
-            $submission = Submission::create([
-                'user_id' => auth()->id(),
-                'task_id' => (int) $request->task_id,
-                'submit_path' => $filePath,
-                'submit_comment' => $request->comment,
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now(),
-            ]);
+            // Store the new file
+            $file = $request->file('file');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('restapi/submissions', $fileName, 'public');
 
-            // Commit if success
-            DB::commit();
+            // If submission already exists, update it
+            if ($submission) {
+                $submission->submit_path = $filePath;
+                $submission->submit_comment = $request->comment;
+                $submission->submit_count = $submission->submit_count + 1;
+                $submission->updated_at = now();
+                $submission->save();
+            } else {
+                // If submission does not exist, create a new one
+                Submission::create([
+                    'user_id' => auth()->id(),
+                    'task_id' => (int) $request->task_id,
+                    'submit_path' => $filePath,
+                    'submit_comment' => $request->comment,
+                    'submit_count' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
-            // Progress calculation
+            DB::commit(); // Commit if success
+
+            // Calculate progress
             $this->getProgress();
 
-            // Get topic ID
-            $topicId = Task::where('id', $submission->task_id)->value('topic_id');
-
-            // Run Codeception test
-            $this->runCodeceptionTest($topicId, $filePath);
-
-            // Get test result from codeception
-            $testResult = $this->runCodeceptionTest($topicId, $filePath);
-
-            return back()->with('success', 'Upload berhasil! Tes otomatis telah dijalankan.')
-                     ->with('test_result', $testResult);
+            return back()->with('success', 'Upload berhasil! Tes otomatis telah dijalankan.');
 
         } catch (\Exception $e) {
             DB::rollBack(); // rollback if failed
@@ -157,40 +190,101 @@ class RestApiController extends Controller
 
     // Test files
     private $testFiles = [
-        2 => 'Topic1DataTest.php',
-        3 => 'Topic2PostTest.php',
-        4 => 'Topic3GetTest.php',
-        5 => 'Topic4PutTest.php',
-        6 => 'Topic5DeleteTest.php',
+        2 => 'Post',
+        3 => 'Get',
+        4 => 'Put',
+        5 => 'Delete',
     ];
 
-    private function runCodeceptionTest($topicId, $filePath)
+    public function runCodeceptionTest(Request $request)
     {
-        if (!isset($this->testFiles[$topicId])) {
-            Session::put('test_result', "Tidak ada test yang cocok untuk Topic ID: $topicId");
-            return "Tidak ada test yang cocok untuk Topic ID: $topicId";
+        $userId = auth()->id();
+        $taskId = $request->input('task_id');
+
+        $submission = Submission::where('user_id', $userId)
+            ->where('task_id', $taskId)
+            ->latest()
+            ->first();
+
+        if (!$submission) {
+            return back()->withErrors('Submission not found.');
         }
 
-        $testFile = $this->testFiles[$topicId];
+        $filePath = $submission->submit_path;
         $submissionPath = public_path("storage/" . $filePath);
 
-        // Run Codeception test
-        $command = ['C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe', base_path('vendor/bin/codecept'), 'run', 'unit', $testFile];
-        $process = new Process($command);
-        $process->setTimeout(300);
-        $process->setEnv(['testFile' => $submissionPath]); // Set environment variable
-        $process->setWorkingDirectory(base_path());
+        $topicId = Task::where('id', $taskId)->value('topic_id');
 
-        try {
-            $process->mustRun(); // Ensure the process runs successfully
-            $output = $process->getOutput();
-        } catch (\Exception $e) {
-            $output = "Gagal menjalankan Codeception: " . ($e->getMessage() ?: $process->getErrorOutput());
+        // Check if the topic ID exists in the test files mapping
+        if (!isset($this->testFiles[$topicId])) {
+            $errorMessage = "Tidak ada test yang cocok untuk Topic ID: $topicId";
+            Session::put('test_result', $errorMessage);
+            return ['output' => $errorMessage, 'fileContents' => null];
+        }
+    
+        // Get the test file name based on the topic ID
+        $testBase = $this->testFiles[$topicId];
+
+        // Set codeception file path
+        $codeceptionFile = "tests/Api/{$testBase}Cest.php";
+        File::put(base_path('tests/test-config.json'), json_encode([
+            'testFile' => str_replace('/', DIRECTORY_SEPARATOR, $submissionPath),
+        ]));
+        
+        // Run codeception
+        $phpPath = 'C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe'; // Sesuaikan jika portable
+        $projectPath = base_path();
+
+        $process = new Process([
+            $phpPath,
+            'vendor/bin/codecept',
+            'run',
+            'Api',
+            $codeceptionFile,
+        ], $projectPath);
+
+        // Set environment variables
+        $process->setEnv(array_merge($_ENV, [
+            'APP_ENV' => 'testing',
+            'DB_CONNECTION' => 'null',
+            'CACHE_DRIVER' => 'array',
+            'SESSION_DRIVER' => 'array',
+            'QUEUE_CONNECTION' => 'sync',
+        ]));
+
+        $process->run();
+
+        $output = $process->getOutput();
+        $errorOutput = $process->getErrorOutput();
+
+        // Combine output and error for full visibility
+        $fullOutput = $output . "\n" . $errorOutput;
+
+        // Optional: strip ANSI escape sequences
+        $cleanOutput = preg_replace('/\e\[([;\d]+)?m/', '', $fullOutput);
+        dd($cleanOutput);
+
+        // Check if feedback already exists.
+        $existingFeedback = Feedback::where('submission_id', $submission->id)->first();
+
+        // If feedback exists, update it; otherwise, create a new one.
+        if ($existingFeedback) {
+            $existingFeedback->update([
+                'test_result' => $cleanOutput,
+                'updated_at' => Carbon::now(),
+            ]);
+        } else {
+            Feedback::create([
+                'submission_id' => $submission->id,
+                'test_result' => $cleanOutput,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ]);
         }
 
-        // Save test result to session
-        Session::put('test_result', $output);
+        // Save output to session (flash)
+        Session::flash('test_result', $cleanOutput);
 
-        return $output;
+        return back()->with('testResult', $cleanOutput);
     }
-}
+}    

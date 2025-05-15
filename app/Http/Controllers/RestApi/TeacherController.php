@@ -99,7 +99,7 @@ class TeacherController extends Controller
 
         $pdf_reader = $taskWithFile ? 1 : 0;
 
-        // Ambil submission terakhir untuk user dan task tertentu
+        // Get lastest submission data by user ID and task ID
         $submissions = Submission::where('task_id', $task_id)
             ->latest()
             ->with('user')
@@ -116,30 +116,41 @@ class TeacherController extends Controller
             'pdf_reader' => $pdf_reader,
             'topicsCount' => $topicsCount,
             'submissions' => $submissions,
-            // 'output' => $output,
         ]);
     }
 
     // Add task to database
     public function addTask(Request $request)
     {
+        // Validate: only 1 or 2 allowed
+        $request->validate([
+            'order_number' => 'in:1,2',
+        ]);
+
+        // Check if task with this topic_id and order_number already exists
+        $exists = Task::where('topic_id', $request->topic_id)
+                    ->where('order_number', $request->order_number)
+                    ->exists();
+
+        if ($exists) {
+            return back()->withErrors(['order_number' => 'The selected order number is already used for this topic.']);
+        }
+
         if ($request->hasFile('file_path')) {
             $file = $request->file('file_path');
             $fileName = time() . '_' . $file->getClientOriginalName();
             $filePath = $file->storeAs('restapi/tasks', $fileName, 'public');
         }
-        
-        $data = [
+
+        Task::create([
             'topic_id' => $request->topic_id,
             'title' => $request->title,
             'order_number' => $request->order_number,
             'flag' => $request->flag,
-            'file_path' => $filePath,
+            'file_path' => 'storage/' . $filePath,
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
-        ];
-        
-        Task::create($data);
+        ]);
 
         return back()->with('success', 'Task added successfully!');
     }
@@ -149,22 +160,31 @@ class TeacherController extends Controller
     {
         $task = Task::findOrFail($request->id);
 
-        // Cek apakah ada file baru yang diunggah
+        $duplicate = Task::where('topic_id', $request->topic_id)
+            ->where('order_number', $request->order_number)
+            ->where('id', '!=', $task->id)
+            ->exists();
+
+        if ($duplicate) {
+            return back()->withErrors(['order_number' => 'This order number is already used for the selected topic.']);
+        }
+
+        // Check if file_path is not empty
         if ($request->hasFile('file_path')) {
-            // Hapus file lama jika ada
+            // Delete old file if exists
             if ($task->file_path && Storage::exists(str_replace('storage/', '', $task->file_path))) {
                 Storage::delete(str_replace('storage/', '', $task->file_path));
             }
 
-            // Simpan file baru
+            // Store new file
             $file = $request->file('file_path');
             $fileName = time() . '_' . $file->getClientOriginalName();
             $filePath = $file->storeAs('restapi/tasks', $fileName, 'public');
 
-            // Simpan path file baru ke database
+            // Set new file path
             $request['file_path'] = 'storage/' . $filePath;
         } else {
-            // Gunakan file lama jika tidak ada file baru
+            // Use old file path if no new file is uploaded
             $request['file_path'] = $task->file_path;
         }
 
@@ -196,40 +216,42 @@ class TeacherController extends Controller
     // Export PDF
     public function exportPDF(Request $request)
     {
-        // Get user ID
-        $user = $request->query('user_id');
-        // Ambil semua submission yang memiliki file_path
+        // Get user adn task ID
+        $userId = $request->query('user_id');
+        $taskId = $request->query('task_id');
+
         $submissions = Submission::with(['user', 'task.topic', 'feedback'])
-            ->where('user_id', $user)
-            ->whereNotNull('submit_path') // Hanya yang memiliki file
+            ->where('user_id', $userId)
+            ->where('task_id', $taskId)
+            ->whereNotNull('submit_path')
             ->latest()
             ->limit(1)
             ->get();
             
-        // Array untuk menyimpan isi file PHP
+        // Array for storing file contents
         $filesContent = [];
 
         foreach ($submissions as $submission) {
-            $filePath = "public/" . $submission->submit_path; // Sesuaikan path
+            $filePath = "public/" . $submission->submit_path;
 
-            // Gunakan Storage untuk mengecek apakah file ada
+            // Check if file exists
             if (!Storage::exists($filePath)) {
-                continue; // Lewati jika file tidak ditemukan
+                continue;
             }
 
-            // Baca isi file PHP dari Storage
+            // Read file content
             $fileContent = Storage::get($filePath);
             
-            // Escape HTML agar kode PHP tidak dieksekusi di PDF
+            // Escape HTML entities
             $escapedCode = htmlspecialchars_decode($fileContent);
 
-            // Pastikan semua data tersedia sebelum dimasukkan ke array
             $filesContent[] = [
                 'user_name'    => $submission->user->name ?? 'No Name',
                 'user_email'   => $submission->user->email ?? 'No Email',
                 'task_title'   => $submission->task->title ?? 'No Task',
                 'topic_title'  => $submission->task->topic->title ?? 'No Topic',
                 'topic_desc'   => $submission->task->topic->description ?? 'No Description',
+                'submit_count' => $submission->submit_count ?? 0,
                 'code'         => $escapedCode,
                 'test_result'  => $submission->feedback->test_result ?? 'No Test Result',
                 'updated_at'   => $submission->updated_at->format('Y-m-d H:i:s')
@@ -240,7 +262,7 @@ class TeacherController extends Controller
         $pdf = app('dompdf.wrapper');
         $pdf->loadView('restapi.teacher.pdf', compact('filesContent'));
 
-        // Stream PDF dengan nama berdasarkan user pertama dalam data
+        // Stream PDF
         return $pdf->stream('submission.pdf');
     }
 }

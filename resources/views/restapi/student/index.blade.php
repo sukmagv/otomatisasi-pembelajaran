@@ -196,12 +196,15 @@
                                                  style="width: 180px; height: 45px; border-radius: 10px; background-color: #EAEAEA; transition: background-color 0.3s, color 0.3s;">
                                                 <a class="d-flex align-items-center text-muted text-decoration-none p-2 w-100 text-center" 
                                                    data-toggle="modal" data-target="#exampleModal" 
-                                                   onclick="materialModal('{{ $topic->id }}','{{ $topic->title }}','{{ $rows }}')">
+                                                   data-task-id="{{ $topic->firstTask->id ?? '' }}" 
+                                                   data-topic-id="{{ $topic->id }}"
+                                                   data-title="{{ $topic->title }}"
+                                                   onclick="openMaterialModal(this)">
                                                     <i class="fas fa-key" style="margin-right: 5px;"></i> <!-- Ikon kunci -->
                                                     Material Details
-                                                </a>
+                                                </a>                                              
                                             </div>
-                                        </div>                                        
+                                        </div>                                                                                
                                         
                                     </div>
                                     @endforeach
@@ -240,7 +243,6 @@
                                 <input type="hidden" id="id" />
                                 <input type="hidden" id="title" />
                                 <input type="hidden" id="controller" />
-                                <span class="text-sm">Have {{ $topicsCount }} material that will be discussed in detail</span>
                             </div>
 
                             <div class="col-md-7">
@@ -267,20 +269,12 @@
                                         <br>
                                         VISUAL STUDIO CODE
                                     </div>
-                                    {{-- <div class="col-md-6 text-center text-sm">
-                                        <a href="https://www.apachefriends.org/" target="_blank">
-                                            <img style="width: 90px; height: 80px; object-fit: cover" src="{{asset("./images/php/xampp.png")}}" alt="">
-                                        </a>
-                                        <br>
-                                        XAMPP
-                                    </div> --}}
-                                    
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" style="margin-left: 10px; width: 160px;" onclick="materialDetailPage()">
+                        <button type="button" class="btn btn-primary" style="margin-left: 10px; width: 160px;" onclick="redirectToDetail()">
                             <i class="fas fa-key" style="margin-right: 5px;"></i>Enroll Material
                         </button>
                     </div>
@@ -297,12 +291,27 @@
             $("#span_title").text(title);
         }
 
-        function materialDetailPage() {
-            var csrfToken = "{{ csrf_token() }}";
-            let id = $("#id").val();
-            let title = $("#title").val();
-            let controller = $("#controller").val();
-            window.location.href = "{{ route('restapi_topic_detail') }}?id=" + encodeURIComponent(id);
+        // Variabel global untuk menyimpan topic_id & task_id
+        var selectedTopicId = null;
+        var selectedTaskId = null;
+
+        function openMaterialModal(element) {
+            // Simpan ID yang dipilih
+            selectedTopicId = element.getAttribute("data-topic-id");
+            selectedTaskId = element.getAttribute("data-task-id");
+
+            // Tampilkan modal
+            $("#exampleModal").modal("show");
+        }
+
+        function redirectToDetail() {
+            if (selectedTopicId && selectedTaskId) {
+                window.location.href = "{{ route('restapi_topic_detail') }}" +
+                    "?id=" + encodeURIComponent(selectedTopicId) +
+                    "&task_id=" + encodeURIComponent(selectedTaskId);
+            } else {
+                alert("Terjadi kesalahan, silakan coba lagi.");
+            }
         }
 
         // Fungsi untuk mengubah warna ikon, teks, dan link menjadi biru
