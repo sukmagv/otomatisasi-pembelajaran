@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\ServiceProvider;
+use League\CommonMark\Extension\CommonMark\Node\Inline\Code;
 
 return [
 
