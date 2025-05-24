@@ -39,9 +39,18 @@
         <p><strong>Submitted by:</strong> {{ $file['user_name'] }} ({{ $file['user_email'] }})</p>
         <p><strong>Updated At:</strong> {{ $file['updated_at'] }}</p>
         <p><strong>Topic Description:</strong> {{ $file['topic_desc'] }}</p>
-        <p><strong>Submit Count:</strong> {{ $file['submit_count'] }}</p>
+        @if($file['interval'])
+            <p><strong>Interval:</strong> 
+                {{ str_replace(' before', '', $file['interval']['interval_readable']) }}
+            </p>
+        @else
+            <p><strong>Interval:</strong> No previous submission</p>
+        @endif
+        <p><strong>Total Submit Count:</strong> {{ $file['count'] }}</p>
         <h4>Submitted Code:</h4>
         <pre>{{ $file['code'] }}</pre>
+        <p><strong>Output:</strong></p>
+        <pre>{!! nl2br(e($file['run_output'])) !!}</pre>
         <p><strong>Test Result:</strong></p>
         <pre>{!! nl2br(e($file['test_result'])) !!}</pre>
         <hr>

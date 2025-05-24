@@ -201,14 +201,14 @@
             <img src="{{ asset('images/right.png') }}" style="height: 24px; margin-right: 10px; margin-top: 3px; border:1px solid; border-radius:50%">
             <p class="text-list" style="font-size: 20px; font-weight: 600;">
                 Task List
-            </p>
+            </p> 
         </div>
         
         <div class="accordion" id="topicsAccordion" style="margin-top: 20px;">
             @foreach($topics as $topic)
                 @php
-                    // Ambil task dengan order_number = 1 untuk setiap topic
-                    $defaultTask = isset($tasks[$topic->id]) ? $tasks[$topic->id]->where('order_number', 1)->first() : null;
+                    // Ambil task setiap topic
+                    $defaultTask = isset($tasks[$topic->id]) ? $tasks[$topic->id][0] : null;
         
                     // Cek apakah topic yang sedang dipilih sesuai dengan yang ada di request
                     $isActive = request()->query('id') == $topic->id;
@@ -272,11 +272,9 @@
         </div>
     </div>
     
+    @if($activeTask && $activeTask->flag == 1)
     <div style="padding: 20px; max-width: 68%; margin-left:5px; margin-top: -20px;">
         <div style="border: 1px solid #ccc; padding: 20px 10px 10px 30px; border-radius: 5px;margin-bottom:40px">
-        <!-- <a href="{{ asset('/storage/private/febri syawaldi/febri syawaldi_db_conn.php') }}" download>Download File</a>
-        <a href="{{public_path('storage/private/febri syawaldi/febri syawaldi_db_conn.php')}}" download>Click me</a> -->
-
 
             <table class="table table-bordered">
                 <thead>
@@ -293,7 +291,7 @@
                             <td>{{ $item->user?->name }}</td>
                             <td>{{ \Carbon\Carbon::parse($item->created_at)->translatedFormat('l, d F Y H:i') }}</td>
                             <td>
-                                <a href="{{ route('restapi_export_pdf', ['user_id' => $item->user->id, 'task_id' => $item->task->id]) }}" 
+                                <a href="{{ route('restapi_export_pdf', ['user_id' => $item->user->id, 'task_id' => $item->task->id, 'submission_id' => $item->id]) }}" 
                                 class="btn btn-primary" target="_blank">
                                 Download File
                                 </a>
@@ -305,6 +303,7 @@
 
         </div>
     </div>
+    @endif
 
     <!-- Footer -->
     <footer class="text-center p-2 fixed-bottom" style="background-color: #EAEAEA; color: #636363; width: 100%;">
@@ -327,8 +326,7 @@
             }
         });
 
-    </script>
-    <script>
+
         function toggleSidebar() {
             document.getElementById("sidebar").classList.toggle("active");
         }

@@ -190,9 +190,9 @@
                             <div class="tab-content" style="margin-bottom: 50px">
                                 <!-- Learning Topic Tab -->
                                 <div class="tab-pane fade show active" id="topics">
-                                    <button class="btn btn-primary my-3" style="width: 180px" onclick="addTopic()">
+                                    {{-- <button class="btn btn-primary my-3" style="width: 180px" onclick="addTopic()">
                                         <i class="fas fa-plus mr-2"></i>Add topic
-                                    </button>
+                                    </button> --}}
                                     <div class="table-responsive">
                                         <table id="topicsTable" class="table table-striped table-bordered">
                                             <thead class="table-light">
@@ -200,7 +200,6 @@
                                                     <th>No</th>
                                                     <th>Title</th>
                                                     <th>Description</th>
-                                                    <th>Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -209,20 +208,6 @@
                                                     <td>{{ $index + 1 }}</td>
                                                     <td>{{ $topic->title }}</td>
                                                     <td>{{ $topic->description }}</td>
-                                                    <td class="text-center">
-                                                        <!-- Tombol Edit -->
-                                                        <button class="btn btn-warning btn-sm" 
-                                                                data-bs-toggle="modal" data-bs-target="#editModal" 
-                                                                onclick="editTopic('{{ $topic->id }}', '{{ $topic->title }}', '{{ $topic->description }}')">
-                                                            <i class="fas fa-edit"></i> Edit
-                                                        </button>
-                                    
-                                                        <!-- Tombol Delete -->
-                                                        <button class="btn btn-danger btn-sm" 
-                                                                onclick="deleteTopic('{{ $topic->id }}')">
-                                                            <i class="fas fa-trash"></i> Delete
-                                                        </button>
-                                                    </td>
                                                 </tr>
                                                 @endforeach
                                             </tbody>
@@ -235,6 +220,33 @@
                                     <button class="btn btn-primary my-3" style="width: 180px" onclick="addTask()">
                                         <i class="fas fa-plus mr-2"></i>Add task
                                     </button>
+
+                                    @if (session('success'))
+                                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                            {{ session('success') }}
+                                            <script>
+                                                setTimeout(() => {
+                                                    document.querySelector('.alert').remove();
+                                                }, 3000); // 3 detik
+                                            </script>
+                                        </div>
+                                    @endif
+
+                                    @if ($errors->any())
+                                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                            <ul class="mb-0">
+                                                @foreach ($errors->all() as $error)
+                                                    <li>{{ $error }}</li>
+                                                @endforeach
+                                            </ul>
+                                            <script>
+                                                setTimeout(() => {
+                                                    document.querySelector('.alert').remove();
+                                                }, 4000); // 4 detik
+                                            </script>
+                                        </div>
+                                    @endif
+
                                     <div class="table-responsive">
                                         <table id="taskTable" class="table table-striped table-bordered">
                                             <thead class="table-light">
@@ -242,7 +254,6 @@
                                                     <th>No</th>
                                                     <th>Topic ID</th>
                                                     <th>Title</th>
-                                                    <th>Type</th>
                                                     <th>Need Submission</th>
                                                     <th>Actions</th>
                                                 </tr>
@@ -253,7 +264,6 @@
                                                     <td>{{ $index + 1 }}</td>
                                                     <td>{{ $task->topic_id }}</td>
                                                     <td>{{ $task->title }}</td>
-                                                    <td>{{ $task->order_number == 1 ? 'Praktikum' : "Latihan Soal" }}</td>
                                                     <td>{{ $task->flag == 1 ? 'Yes' : 'No' }}</td>
                                                     <td class="text-center">
                                                         <!-- Tombol Open -->
@@ -264,13 +274,13 @@
                                                         <!-- Tombol Edit -->
                                                         <button class="btn btn-warning btn-sm" 
                                                                 data-bs-toggle="modal" data-bs-target="#editTaskModal" 
-                                                                onclick="editTask('{{ $task->id }}', '{{ $task->topic_id }}', '{{ $task->title }}', '{{ (int) $task->order_number }}', '{{ $task->flag }}', '{{ $task->file_path}}')">
+                                                                onclick="editTask('{{ $task->id }}', '{{ $task->topic_id }}', '{{ $task->title }}', '{{ $task->flag }}', '{{ $task->file_path}}')">
                                                             <i class="fas fa-edit"></i> Edit
                                                         </button>
                                     
                                                         <!-- Tombol Delete -->
                                                         <button class="btn btn-danger btn-sm" 
-                                                                onclick="deleteTask('{{ $task->id }}')">
+                                                                onclick="deleteTask('{{ $task->id }}', '{{ addslashes($task->title) }}')">
                                                             <i class="fas fa-trash"></i> Delete
                                                         </button>
                                                     </td>
@@ -285,77 +295,6 @@
                     </div>
                 </div>
             </main>
-        </div>
-    </div>
-    
- <!-- The Topic Modal -->
-    <!-- Modal Add Topic -->
-    <div class="modal fade" id="addTopicModal" tabindex="-1" aria-labelledby="addTopicModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addTopicModalLabel">Add New Topic</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="addTopicForm" method="POST" action="{{ route('restapi_add_topic') }}">
-                        @csrf
-                        <div class="mb-3">
-                            <label for="addTopicTitle" class="form-label">Title</label>
-                            <input type="text" class="form-control" id="addTopicTitle" name="title" required>
-                            <label for="addTopicDesc" class="form-label">Description</label>
-                            <textarea class="form-control" id="addTopicDesc" name="description" rows="4" required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-success">Add Topic</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Edit -->
-    <div class="modal fade" id="editTopicModal" tabindex="-1" aria-labelledby="editTopicModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editTopicModalLabel">Edit Topic</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="editTopicForm" method="POST" action="{{ route('restapi_update_topic') }}">
-                        @csrf
-                        <input type="hidden" name="id" id="editTopicId">
-                        <div class="mb-3">
-                            <label for="editTopicTitle" class="form-label">Title</label>
-                            <input type="text" class="form-control" id="editTopicTitle" name="title" required>
-                            <label for="editTopicDesc" class="form-label">Description</label>
-                            <textarea class="form-control" id="editTopicDesc" name="description" rows="4" required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Delete Confirmation -->
-    <div class="modal fade" id="deleteTopicModal" tabindex="-1" aria-labelledby="deleteTopicModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="deleteTopicModalLabel">Delete Confirmation</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to delete this topic?</p>
-                    <form id="deleteTopicForm" method="POST" action="{{ route('restapi_delete_topic') }}">
-                        @csrf
-                        <input type="hidden" name="id" id="deleteTopicId">
-                        <button type="submit" class="btn btn-danger">Yes, Delete</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    </form>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -381,30 +320,6 @@
                             </select>
                             <label for="addTaskTitle" class="form-label">Title</label>
                             <input type="text" class="form-control" id="addTaskTitle" name="title" required>
-                            @php
-                                // Group existing order numbers by topic
-                                $orderUsedByTopic = [];
-
-                                foreach ($tasks as $task) {
-                                    $orderUsedByTopic[$task->topic_id][] = $task->order_number;
-                                }
-
-                                // Get selected topic (if previously submitted)
-                                $selectedTopicId = old('topic_id');
-                            @endphp
-                            <label for="addTaskOrder" class="form-label">Select Type</label>
-                            <select class="form-control" id="addTaskOrder" name="order_number" required>
-                                <option value="">-- Select Order --</option>
-                                @for($i = 1; $i <= 2; $i++)
-                                    <option value="{{ $i }}"
-                                        @if(isset($orderUsedByTopic[$selectedTopicId]) && in_array($i, $orderUsedByTopic[$selectedTopicId]))
-                                            disabled
-                                        @endif
-                                    >
-                                        {{ $i == 1 ? '1 - Praktikum' : '2 - Task' }}
-                                    </option>
-                                @endfor
-                            </select>
                             <label for="addTaskFlag" class="form-label">Need Submission?</label>
                             <select class="form-control" id="addTaskFlag" name="flag" required>
                                 <option value="1">Yes</option>
@@ -449,28 +364,11 @@
 
                                 // Ambil task lain selain task ini
                                 $otherTasks = $tasks->where('id', '!=', $currentTaskId);
-
-                                // Ambil order_number yang dipakai oleh task lain dalam topic yang sama
-                                $usedOrders = $otherTasks->where('topic_id', $currentTopicId)->pluck('order_number')->toArray();
                             @endphp
-                            <label for="editTaskOrder" class="form-label">Select Type</label>
-                            <select class="form-control" id="editTaskOrder" name="order_number" required>
-                                <option value="">-- Select Order --</option>
-                                @for ($i = 1; $i <= 2; $i++)
-                                    @php
-                                        // Jika ini nilai yang sedang dipakai task yang diedit, biarkan tetap aktif
-                                        $selected = old('order_number') == $i ? 'selected' : '';
-                                        $isDisabled = in_array($i, $usedOrders) && old('order_number') != $i;
-                                    @endphp
-                                    <option value="{{ $i }}" {{ $selected }} {{ $isDisabled ? 'disabled' : '' }}>
-                                        {{ $i == 1 ? '1 - Praktikum' : '2 - Task' }}
-                                    </option>
-                                @endfor
-                            </select>
                             <label for="editTaskFlag" class="form-label">Need Submission?</label>
                             <select class="form-control" id="editTaskFlag" name="flag" required>
-                                <option value="1">Yes</option>
-                                <option value="0">No</option>
+                                <option value="1" {{ $task->flag == 1 ? 'selected' : '' }}>Yes</option>
+                                <option value="0" {{ $task->flag == 0 ? 'selected' : '' }}>No</option>
                             </select>
                             <!-- Input File -->
                             <label for="editTaskFile" class="form-label">Upload PDF (Kosongkan jika tidak ingin mengubah)</label>
@@ -499,7 +397,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to delete this task?</p>
+                    <p>Are you sure you want to delete this task "<span id="deleteTaskTitle"></span>"?</p>
                     <form id="deleteTaskForm" method="POST" action="{{ route('restapi_delete_task') }}" enctype="multipart/form-data">
                         @csrf
                         <input type="hidden" name="id" id="deleteTaskId">
@@ -604,27 +502,6 @@
         });
     </script>
     <script>
-        // Function untuk menampilkan modal Add Topic
-        function addTopic() {
-            $('#addTopicTitle').val('');
-            $('#addTopicDesc').val('');
-            $('#addTopicModal').modal('show');
-        }
-    
-        // Function untuk menampilkan modal Edit Topic
-        function editTopic(id, title, description) {
-            $('#editTopicId').val(id);
-            $('#editTopicTitle').val(title);
-            $('#editTopicDesc').val(description);
-            $('#editTopicModal').modal('show');
-        }
-    
-        // Function untuk menampilkan modal Delete Topic
-        function deleteTopic(id) {
-            $('#deleteTopicId').val(id);
-            $('#deleteTopicModal').modal('show');
-        }
-
         // Function untuk menampilkan isi Task
         function openTask(id, topic_id) {
             window.location.href = "{{ route('restapi_open_task') }}?id=" + encodeURIComponent(topic_id) + "&task_id=" + encodeURIComponent(id);
@@ -634,18 +511,18 @@
         function addTask() {
             $('#addTaskTopic').val('');
             $('#addTaskTitle').val('');
-            $('#addTaskOrder').val('');
+            $('#addTaskType').val('');
             $('#addTaskFlag').val('');
             $('#addTaskFile').val('');
             $('#addTaskModal').modal('show');
         }
     
         // Function untuk menampilkan modal Edit Task
-        function editTask(id, topic_id, title, order_number, flag, file_path) {
+        function editTask(id, topic_id, title, flag, file_path) {
             $('#editTaskId').val(id);
             $('#editTaskTopic').val(topic_id);
             $('#editTaskTitle').val(title);
-            $('#editTaskOrder').val(order_number);
+            $('#editTaskFlag').val(flag);
             $('#editTaskFile').val('');
             
             // Kosongkan input file agar tidak memaksa pengguna mengunggah ulang
@@ -664,8 +541,9 @@
         }
     
         // Function untuk menampilkan modal Delete Task
-        function deleteTask(id) {
-            $('#deleteTaskId').val(id);
+        function deleteTask(id, title) {
+            document.getElementById('deleteTaskId').value = id;
+            document.getElementById('deleteTaskTitle').textContent = title;
             $('#deleteTaskModal').modal('show');
         }
 
