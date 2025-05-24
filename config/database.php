@@ -83,6 +83,20 @@ return [
             ]) : [],
         ],
 
+        'mysql_api_testing' => [
+            'driver' => 'mysql',
+            'host' => env('DB_APITEST_HOST', '127.0.0.1'),
+            'port' => env('DB_APITEST_PORT', '3306'),
+            'database' => env('DB_APITEST_DATABASE', 'test_db'),
+            'username' => env('DB_APITEST_USERNAME', 'root'),
+            'password' => env('DB_APITEST_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+        ],
+
         // 'pgsql' => [
         //     'driver' => 'pgsql',
         //     'url' => env('DATABASE_URL'),

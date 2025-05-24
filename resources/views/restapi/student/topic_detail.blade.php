@@ -202,7 +202,12 @@
             <p class="text-list" style="font-size: 20px; font-weight: 600;">
                 Task List
             </p>
-        </div>        
+        </div>  
+        <div style="margin-bottom: 10px;">
+            <strong>Waktu Tersisa:</strong>
+            <span id="countdown" style="color: red; font-weight: bold;">Memuat...</span>
+        </div>
+      
 
         <div class="progress-container">
             <div id="progressbar" style="width: {{ session('progress', 0) }}%;"></div>
@@ -212,8 +217,8 @@
         <div class="accordion" id="topicsAccordion" style="margin-top: 20px;">
             @foreach($topics as $topic)
                 @php
-                    // Ambil task dengan order_number = 1 untuk setiap topic
-                    $defaultTask = isset($tasks[$topic->id]) ? $tasks[$topic->id]->where('order_number', 1)->first() : null;
+                    // Ambil task dengan module_type = 1 untuk setiap topic
+                    $defaultTask = isset($tasks[$topic->id]) ? $tasks[$topic->id]->where('module_type', 0)->first() : null;
         
                     // Cek apakah topic yang sedang dipilih sesuai dengan yang ada di request
                     $isActive = request()->query('id') == $topic->id;
@@ -306,10 +311,10 @@
                                 type="file" 
                                 name="file" 
                                 class="form-control" 
-                                placeholder="{{ $submission ? basename($submission->submit_path) : 'Choose .php or .html file' }}"
+                                placeholder="{{ $submission ? basename($submission->submit_path) : '.php file' }}"
                                 {{ $submission ? '' : 'required' }}
                             >
-                            <small>Enter the work results <code>.php | .html</code> (Max: 2MB)</small>
+                            <small>Enter the work results <code>.php </code> (Max: 2MB)</small>
                         </div>
 
                         {{-- Comment --}}
@@ -348,8 +353,10 @@
                         @endif
                     </form>
 
+                    {{-- Verify Button --}}
+
                     <form action="{{ route('restapi_verify') }}" method="POST" style="display: inline;">
-                        {{-- Verify Form --}}
+                        {{-- Verify Button --}}
                         {{ csrf_field() }}
                         @csrf
                         <input type="hidden" name="task_id" value="{{ old('task_id', request()->query('task_id')) }}">
@@ -360,9 +367,22 @@
 
                     {{-- Feedback Section --}}
                     @if(session('test_result') || $testResult)
-                        <div class="alert alert-danger mt-3">
+                        <div class="mt-3" style="border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
                             <h5><b>Feedback:</b></h5>
                             <pre>{{ session('test_result') ?? $testResult }}</pre>
+                        </div>
+                    @endif
+                    
+                    @if (!empty($runOutput))
+                        @php
+                            $result = ['output' => $runOutput];
+                        @endphp
+
+                        <div class="my-3" style="border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+                            @if (!empty($result['output']))
+                                <strong>Output (JSON):</strong>
+                                <pre>{{ json_encode($result['output'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+                            @endif
                         </div>
                     @endif
                 </div>
@@ -371,7 +391,7 @@
     </div>
     
     @else
-        
+        <div style="padding: 20px; max-width: 68%; margin-left:5px;"></div>
     @endif
 
     <!-- Footer -->
@@ -395,8 +415,6 @@
             }
         });
 
-    </script>
-    <script>
         function toggleSidebar() {
             document.getElementById("sidebar").classList.toggle("active");
         }
@@ -458,6 +476,30 @@
         $(document).ready(function() {
             getProgress();
         });
+
+        const startTime = new Date("{{ \Carbon\Carbon::parse($startTime)->format('Y-m-d H:i:s') }}");
+        const endTime = new Date(startTime.getTime() + 2 * 60 * 60 * 1000); // +2 jam
+        const uploadBtn = document.querySelector('button[type="submit"]');
+
+        function updateTimer() {
+            const now = new Date();
+            const remaining = Math.floor((endTime - now) / 1000);
+
+            if (remaining <= 0) {
+                document.getElementById('countdown').innerText = "Waktu habis!";
+                uploadBtn.disabled = true;
+                uploadBtn.innerText = "Waktu habis";
+            } else {
+                const hours = Math.floor(remaining / 3600);
+                const minutes = Math.floor((remaining % 3600) / 60);
+                const seconds = remaining % 60;
+
+                document.getElementById('countdown').innerText = 
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        setInterval(updateTimer, 1000);
 
     </script>
 </body>

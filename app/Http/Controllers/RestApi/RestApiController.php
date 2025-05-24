@@ -66,11 +66,12 @@ class RestApiController extends Controller
                 ->latest()
                 ->first();
     
+            $runOutput = null;
             $testResult = null;
             if ($submission) {
-                $testResult = Feedback::where('submission_id', $submission->id)
-                    ->latest()
-                    ->value('test_result');
+                $feedback = Feedback::where('submission_id', $submission->id)->latest()->first();          
+                $runOutput = $feedback ? json_decode($feedback->run_output, true) : null;
+                $testResult = $feedback?->test_result;
                 if ($submission->submit_path) {
                     $fullPath = storage_path('app/public/' . $submission->submit_path);
                     if (file_exists($fullPath)) {
@@ -88,6 +89,16 @@ class RestApiController extends Controller
             }
 
         }
+        
+        $filteredResult = $this->filterTestResult($testResult ?? '');
+
+        // Set waktu mulai hanya jika belum pernah diset
+        $sessionKey = "start_time_topic_{$topic_id}_task_{$task_id}";
+        if (!session()->has($sessionKey)) {
+            session([$sessionKey => now()]);
+        }
+
+        $startTime = session($sessionKey);
 
         return view('restapi.student.topic_detail', [
             'row' => $result,
@@ -100,8 +111,10 @@ class RestApiController extends Controller
             'activeTask' => $activeTask,
             'topicsCount' => $topicsCount,
             'submission' => $submission,
-            'testResult' => $testResult ?? null,
+            'runOutput' => $runOutput ?? null,
+            'testResult' => $filteredResult ?? null,
             'fileContent' => $fileContent ?? null,
+            'startTime' => $startTime
         ]);
     }
 
@@ -111,11 +124,14 @@ class RestApiController extends Controller
         $userId = auth()->id();
 
         // Count all topics
-        $totalTasks = Task::count();
+        $totalTasks = Task::where('flag', 1)->count();
 
         // Count unique submitted tasks by user
         $uniqueSubmittedTasks = Submission::where('user_id', $userId)
-            ->distinct('task_id') // Hanya hitung task unik
+            ->whereHas('task', function ($query) {
+                $query->where('flag', 1);
+            })
+            ->distinct('task_id')
             ->count('task_id');
 
         // Calculate progress percentage
@@ -127,7 +143,6 @@ class RestApiController extends Controller
         return response()->json(['progress' => $progress]);
     }
 
-    // Submit task to database
     public function submit_task(Request $request)
     {
         // Input validation
@@ -137,50 +152,34 @@ class RestApiController extends Controller
             'task_id' => 'required|exists:restapi_topic_tasks,id',
         ]);
 
-        DB::beginTransaction(); // start database transaction
+        DB::beginTransaction(); // Start DB transaction
 
         try {
-            // Get submission by user ID and task ID
-            $submission = Submission::where('user_id', auth()->id())
-                ->where('task_id', $request->task_id)
-                ->first();
-
-            // If submission already exists, delete the old file
-            if ($submission && $submission->submit_path && Storage::disk('public')->exists($submission->submit_path)) {
-                Storage::disk('public')->delete($submission->submit_path);
-            }
-
-            // Store the new file
+            $user = auth()->user();
+            $username = $user->name;
             $file = $request->file('file');
-            $fileName = time() . '_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('restapi/submissions', $fileName, 'public');
+            $fileName = time() . "_" . $file->getClientOriginalName();
 
-            // If submission already exists, update it
-            if ($submission) {
-                $submission->submit_path = $filePath;
-                $submission->submit_comment = $request->comment;
-                $submission->submit_count = $submission->submit_count + 1;
-                $submission->updated_at = now();
-                $submission->save();
-            } else {
-                // If submission does not exist, create a new one
-                Submission::create([
-                    'user_id' => auth()->id(),
-                    'task_id' => (int) $request->task_id,
-                    'submit_path' => $filePath,
-                    'submit_comment' => $request->comment,
-                    'submit_count' => 1,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
+            // Simpan file ke dalam storage/public/restapi/username/filename
+            $filePath = "restapi/{$username}/{$fileName}";
+            Storage::disk('public')->put($filePath, file_get_contents($file->getRealPath()));
+
+            // Create new submission entry
+            Submission::create([
+                'user_id' => $user->id,
+                'task_id' => (int) $request->task_id,
+                'submit_path' => $filePath,
+                'submit_comment' => $request->comment,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
             DB::commit(); // Commit if success
 
-            // Calculate progress
+            // Optionally update progress if needed
             $this->getProgress();
 
-            return back()->with('success', 'Upload berhasil! Tes otomatis telah dijalankan.');
+            return back()->with('success', 'Upload berhasil!');
 
         } catch (\Exception $e) {
             DB::rollBack(); // rollback if failed
@@ -196,6 +195,17 @@ class RestApiController extends Controller
         5 => 'Delete',
     ];
 
+    private function testEnv(): array
+    {
+        return array_merge($_ENV, [
+            'APP_ENV' => 'testing',
+            'DB_CONNECTION' => config('testenv.testing_connection', 'mysql_api_testing'),
+            'CACHE_DRIVER' => 'array',
+            'SESSION_DRIVER' => 'array',
+            'QUEUE_CONNECTION' => 'sync',
+        ]);
+    }
+
     public function runCodeceptionTest(Request $request)
     {
         $userId = auth()->id();
@@ -204,87 +214,130 @@ class RestApiController extends Controller
         $submission = Submission::where('user_id', $userId)
             ->where('task_id', $taskId)
             ->latest()
-            ->first();
+            ->firstOrFail();
 
-        if (!$submission) {
-            return back()->withErrors('Submission not found.');
-        }
+        $runOutput = $this->runFile($userId, $taskId);
 
-        $filePath = $submission->submit_path;
-        $submissionPath = public_path("storage/" . $filePath);
-
+        $submissionPath = public_path("storage/" . $submission->submit_path);
         $topicId = Task::where('id', $taskId)->value('topic_id');
 
-        // Check if the topic ID exists in the test files mapping
-        if (!isset($this->testFiles[$topicId])) {
+        $testBase = $this->testFiles[$topicId] ?? null;
+
+        if (!$testBase) {
             $errorMessage = "Tidak ada test yang cocok untuk Topic ID: $topicId";
             Session::put('test_result', $errorMessage);
             return ['output' => $errorMessage, 'fileContents' => null];
         }
-    
-        // Get the test file name based on the topic ID
-        $testBase = $this->testFiles[$topicId];
 
-        // Set codeception file path
         $codeceptionFile = "tests/Api/{$testBase}Cest.php";
+
+        // Simpan path file untuk digunakan oleh test
         File::put(base_path('tests/test-config.json'), json_encode([
             'testFile' => str_replace('/', DIRECTORY_SEPARATOR, $submissionPath),
         ]));
-        
-        // Run codeception
-        $phpPath = 'C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe'; // Sesuaikan jika portable
-        $projectPath = base_path();
 
         $process = new Process([
-            $phpPath,
+            'C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe',
             'vendor/bin/codecept',
             'run',
             'Api',
             $codeceptionFile,
-        ], $projectPath);
+        ], base_path());
 
-        // Set environment variables
-        $process->setEnv(array_merge($_ENV, [
-            'APP_ENV' => 'testing',
-            'DB_CONNECTION' => 'null',
-            'CACHE_DRIVER' => 'array',
-            'SESSION_DRIVER' => 'array',
-            'QUEUE_CONNECTION' => 'sync',
-        ]));
+        $process->setEnv($this->testEnv());
 
         $process->run();
 
-        $output = $process->getOutput();
-        $errorOutput = $process->getErrorOutput();
+        $cleanOutput = preg_replace('/\e\[([;\d]+)?m/', '', 
+            $process->getOutput() . "\n" . $process->getErrorOutput()
+        );
 
-        // Combine output and error for full visibility
-        $fullOutput = $output . "\n" . $errorOutput;
+        Feedback::create([
+            'submission_id' => $submission->id,
+            'test_result' => $cleanOutput,
+            'run_output' => json_encode($runOutput),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
-        // Optional: strip ANSI escape sequences
-        $cleanOutput = preg_replace('/\e\[([;\d]+)?m/', '', $fullOutput);
-        dd($cleanOutput);
+        $filteredResult = $this->filterTestResult($cleanOutput);
+        Session::flash('test_result', $filteredResult);
 
-        // Check if feedback already exists.
-        $existingFeedback = Feedback::where('submission_id', $submission->id)->first();
+        return back()->with([
+            'testResult' => $filteredResult,
+            'runOutput' => $runOutput,
+        ]);
+    }
 
-        // If feedback exists, update it; otherwise, create a new one.
-        if ($existingFeedback) {
-            $existingFeedback->update([
-                'test_result' => $cleanOutput,
-                'updated_at' => Carbon::now(),
-            ]);
-        } else {
-            Feedback::create([
-                'submission_id' => $submission->id,
-                'test_result' => $cleanOutput,
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now(),
-            ]);
+    protected function runFile($userId, $taskId)
+    {
+        $submission = Submission::where('user_id', $userId)
+            ->where('task_id', $taskId)
+            ->latest()
+            ->firstOrFail();
+
+        if (!$submission) {
+            return response()->json([
+                'status' => 404,
+                'error' => 'Submission not found.'
+            ], 404);
         }
 
-        // Save output to session (flash)
-        Session::flash('test_result', $cleanOutput);
+        $filePath = public_path("storage/" . $submission->submit_path);
 
-        return back()->with('testResult', $cleanOutput);
+        if (!file_exists($filePath)) {
+            return response()->json([
+                'status' => 404,
+                'error' => 'Submission file not found.'
+            ], 404);
+        }
+
+        // Jalankan file eksternal tanpa input karena data hardcoded di dalam file
+        $process = new Process(['php', $filePath]);
+        $process->run();
+
+        if (!$process->isSuccessful()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengeksekusi file',
+            ], 500);
+        }
+
+        // Ambil output dari file eksternal (harus format JSON)
+        $output = json_decode($process->getOutput(), true);
+
+        return [
+            'output' => $output
+        ];
+    }
+
+    protected function filterTestResult(string $output): string
+    {
+        // Jika semua pengujian berhasil
+        if (preg_match('/^OK\s+\(\d+\stests?,\s+\d+\sassertions\)/m', $output)) {
+            return "Semua pengujian berhasil.";
+        }
+
+        $lines = explode("\n", $output);
+
+        foreach ($lines as $line) {
+            // Step Fail lebih prioritas
+            if (preg_match('/Step\s+Fail\s+"(.*?)"/', $line, $matches)) {
+                return "Step Fail: " . $matches[1];
+            }
+
+            // Fail umum
+            if (preg_match('/^Fail\s+(.*)/', $line, $matches)) {
+                return "Fail: " . trim($matches[1]);
+            }
+
+            // Fatal / Parse error
+            if (preg_match('/(Parse error|Fatal error|on line \d+)/i', $line)) {
+                $normalizedLine = preg_replace('/in .*?restapi[\\\\\/][^\\\\\/]+[\\\\\/](\w+\.php)/', 'in $1', $line);
+                return trim($normalizedLine);
+            }
+        }
+
+        return "Pengujian gagal, tetapi tidak ditemukan detail error yang jelas.";
     }
 }    

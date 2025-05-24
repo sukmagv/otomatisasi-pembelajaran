@@ -81,7 +81,6 @@
     <!-- CSS Bootstrap -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <link href="style.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 
@@ -179,12 +178,7 @@
                                 <div class="tab-pane fade show active" id="learning">
                                     @foreach($topics as $topic)
                                     @php
-                                        $limit_id = $topic->id;
-                                        $row = DB::table('restapi_topics')->where('id', $limit_id)->first();
-                                        $rowArray = (array) $row;
-                                        if ($row) {
-                                            $rows = $row->id;  
-                                        } 
+                                        $task = $topic->tasks->first();
                                     @endphp
                                     <div class="row">
                                         <div class="col">
@@ -196,7 +190,7 @@
                                                  style="width: 180px; height: 45px; border-radius: 10px; background-color: #EAEAEA; transition: background-color 0.3s, color 0.3s;">
                                                 <a class="d-flex align-items-center text-muted text-decoration-none p-2 w-100 text-center" 
                                                    data-toggle="modal" data-target="#exampleModal" 
-                                                   data-task-id="{{ $topic->firstTask->id ?? '' }}" 
+                                                   data-task-id="{{ $task->id ?? '' }}" 
                                                    data-topic-id="{{ $topic->id }}"
                                                    data-title="{{ $topic->title }}"
                                                    onclick="openMaterialModal(this)">
@@ -346,20 +340,20 @@
             changeColor('learning');
         });
 
-        var validationLink = document.getElementById('validationLink');
-        validationLink.addEventListener('click', function() {
-            changeColor('validation');
-        });
+        // var validationLink = document.getElementById('validationLink');
+        // validationLink.addEventListener('click', function() {
+        //     changeColor('validation');
+        // });
 
-        var rankLink = document.getElementById('rankLink');
-        rankLink.addEventListener('click', function() {
-            changeColor('rank');
-        });
+        // var rankLink = document.getElementById('rankLink');
+        // rankLink.addEventListener('click', function() {
+        //     changeColor('rank');
+        // });
 
-        var settingsLink = document.getElementById('settingsLink');
-        settingsLink.addEventListener('click', function() {
-            changeColor('settings');
-        });
+        // var settingsLink = document.getElementById('settingsLink');
+        // settingsLink.addEventListener('click', function() {
+        //     changeColor('settings');
+        // });
 
 
         // Function to show the selected content based on sidebar link click
