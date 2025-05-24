@@ -22,9 +22,4 @@ class Topic extends Model
     {
         return $this->hasMany(Task::class, 'topic_id');
     }
-
-    public function firstTask()
-    {
-        return $this->hasOne(Task::class, 'topic_id')->where('order_number', 1);
-    }
 }

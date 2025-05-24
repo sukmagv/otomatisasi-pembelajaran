@@ -15,7 +15,6 @@ class Task extends Model
     protected $fillable = [
         'topic_id',
         'title',
-        'order_number',
         'file_path',
         'flag',
         'created_at',

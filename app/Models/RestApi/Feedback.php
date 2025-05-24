@@ -13,6 +13,7 @@ class Feedback extends Model
 
     protected $fillable = [
         'submission_id',
+        'run_output',
         'test_result',
         'created_at',
         'updated_at',
