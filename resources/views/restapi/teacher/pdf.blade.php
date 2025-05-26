@@ -35,18 +35,20 @@
     <h2>Task Submissions Report</h2>
     
     @foreach ($filesContent as $file)
-        <h3>{{ $file['task_title'] }} - {{ $file['topic_title'] }}</h3>
-        <p><strong>Submitted by:</strong> {{ $file['user_name'] }} ({{ $file['user_email'] }})</p>
-        <p><strong>Updated At:</strong> {{ $file['updated_at'] }}</p>
-        <p><strong>Topic Description:</strong> {{ $file['topic_desc'] }}</p>
+        <h3>{{ $file['task_title'] }} ({{ $file['topic_title'] }})</h3>
+        <p><strong>Nama mahasiswa:</strong> {{ $file['user_name'] }}</p>
+        <p><strong>Email mahasiswa:</strong> {{ $file['user_email'] }}</p>
+        <p><strong>Waktu pengumpulan:</strong> {{ $file['created_at'] }}</p>
+        <p><strong>Deskripsi topik:</strong> {{ $file['topic_desc'] }}</p>
         @if($file['interval'])
-            <p><strong>Interval:</strong> 
+            <p><strong>Rentang waktu dengan pengumpulan sebelumnya:</strong> 
                 {{ str_replace(' before', '', $file['interval']['interval_readable']) }}
             </p>
         @else
-            <p><strong>Interval:</strong> No previous submission</p>
+            <p><strong>Rentang waktu dengan pengumpulan sebelumnya:</strong>-</p>
         @endif
-        <p><strong>Total Submit Count:</strong> {{ $file['count'] }}</p>
+        <p><strong>Pengumpulan ke-</strong>{{ $file['submission_position'] }}</p>
+        <p><strong>Total Pengumpulan:</strong> {{ $file['total_submissions'] }}</p>
         <h4>Submitted Code:</h4>
         <pre>{{ $file['code'] }}</pre>
         <p><strong>Output:</strong></p>

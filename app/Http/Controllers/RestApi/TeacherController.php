@@ -178,7 +178,10 @@ class TeacherController extends Controller
 
         // Hitung interval terhadap submission sebelumnya
         $intervalData = $this->getSubmitIntervalForSubmission($submission);
-        $countSubmissions = $this->countUserSubmissionsByTask($userId, $taskId);
+
+        $stats = $this->getSubmissionStats($submissionId, $userId, $taskId);
+        $totalSubmissions = $stats['total'];
+        $submissionPosition = $stats['position'];
 
         $filesContent = [[
             'user_name'    => $submission->user->name ?? 'No Name',
@@ -190,8 +193,9 @@ class TeacherController extends Controller
             'run_output'   => $submission->feedback->run_output ?? 'No Run Output',
             'test_result'  => $submission->feedback->test_result ?? 'No Test Result',
             'interval'     => $intervalData,
-            'count'        => $countSubmissions,
-            'updated_at'   => $submission->updated_at->format('Y-m-d H:i:s'),
+            'total_submissions' => $totalSubmissions,
+            'submission_position' => $submissionPosition,
+            'created_at'   => $submission->created_at->format('Y-m-d H:i:s'),
         ]];
 
         $pdf = app('dompdf.wrapper');
@@ -227,10 +231,27 @@ class TeacherController extends Controller
         ];
     }
 
-    protected function countUserSubmissionsByTask($userId, $taskId) {
-        return Submission::where('user_id', $userId)
-                        ->where('task_id', $taskId)
-                        ->count();
-    }
+    protected function getSubmissionStats($submissionId, $userId, $taskId)
+    {
+        // Ambil semua ID submission untuk user dan task terkait, diurutkan
+        $submissionIds = Submission::where('user_id', $userId)
+            ->where('task_id', $taskId)
+            ->orderBy('created_at') // atau 'id' jika tidak ada timestamp
+            ->pluck('id')
+            ->toArray();
 
+        // Hitung posisi submission keberapa (index + 1)
+        $submissionNumber = array_search($submissionId, $submissionIds);
+        if ($submissionNumber === false) {
+            return [
+                'total' => count($submissionIds),
+                'position' => null, // submission tidak ditemukan
+            ];
+        }
+
+        return [
+            'total' => count($submissionIds),
+            'position' => $submissionNumber + 1, // index mulai dari 0
+        ];
+    }
 }

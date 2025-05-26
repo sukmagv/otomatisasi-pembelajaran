@@ -68,10 +68,41 @@ class RestApiController extends Controller
     
             $runOutput = null;
             $testResult = null;
+            $fileContent = null;
+            $feedback = null;
+
             if ($submission) {
-                $feedback = Feedback::where('submission_id', $submission->id)->latest()->first();          
-                $runOutput = $feedback ? json_decode($feedback->run_output, true) : null;
-                $testResult = $feedback?->test_result;
+                $submissionId = $submission->id;
+                $userId = $submission->user_id;
+                $taskId = $submission->task_id;
+
+                // Coba ambil feedback dari submission saat ini
+                $feedback = Feedback::where('submission_id', $submissionId)->latest()->first();
+
+                // Jika tidak ada feedback, cari submission sebelumnya yang punya feedback
+                if (!$feedback) {
+                    $fallbackSubmission = Submission::where('user_id', $userId)
+                        ->where('task_id', $taskId)
+                        ->where('id', '!=', $submissionId) // selain submission saat ini
+                        ->orderByDesc('created_at') // cari yang terbaru
+                        ->get()
+                        ->first(function ($sub) {
+                            return Feedback::where('submission_id', $sub->id)->exists();
+                        });
+
+                    if ($fallbackSubmission) {
+                        $submission = $fallbackSubmission; // ganti ke submission fallback
+                        $feedback = Feedback::where('submission_id', $submission->id)->latest()->first();
+                    }
+                }
+
+                // Siapkan data jika feedback ditemukan
+                if ($feedback) {
+                    $runOutput = $feedback->run_output ? json_decode($feedback->run_output, true) : null;
+                    $testResult = $feedback->test_result;
+                }
+
+                // Ambil file content
                 if ($submission->submit_path) {
                     $fullPath = storage_path('app/public/' . $submission->submit_path);
                     if (file_exists($fullPath)) {
@@ -79,15 +110,6 @@ class RestApiController extends Controller
                     }
                 }
             }
-            $viewFile = $request->query('view_file');
-            if ($viewFile && $submission && $submission->submit_path) {
-                $fullPath = storage_path('app/public/' . $submission->submit_path);
-                if (file_exists($fullPath)) {
-                    $content = file_get_contents($fullPath);
-                    return response($content)->header('Content-Type', 'text/plain');
-                }
-            }
-
         }
         
         $filteredResult = $this->filterTestResult($testResult ?? '');
