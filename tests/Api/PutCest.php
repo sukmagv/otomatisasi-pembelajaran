@@ -1,143 +1,103 @@
 <?php
 
 use Tests\Support\ApiTester;
-use Tests\Support\Helper\SubmissionTestHelper;
 
 class PutCest
 {
-    protected static string $phpBinary = 'C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe';
-    protected static string $putTestFilePath;
-    protected static $usersToDelete = [];
-
+    protected $path;
     public function _before(ApiTester $I)
     {
-        $configFile = codecept_root_dir() . 'tests/test-config.json';
-        if (!file_exists($configFile)) {
-            throw new \RuntimeException("Config file tidak ditemukan: {$configFile}");
+        $jsonPath = codecept_root_dir() . 'tests/test-config.json';
+        $json = file_get_contents($jsonPath);
+        $data = json_decode($json, true);
+
+        $rawPath = $data['testFile'];
+        $this->path = str_replace('\\', '/', $rawPath);
+
+        // Validasi: hanya izinkan file post.php
+        $filename = basename($this->path);
+        if ($filename !== 'put.php') {
+            throw new \Exception("File yang diuji bukan 'put.php', tetapi '{$filename}'");
         }
-
-        $config = json_decode(file_get_contents($configFile), true);
-        $realPath = $config['testFile'] ?? null;
-        if (!$realPath || !file_exists($realPath)) {
-            throw new \RuntimeException("File put.php tidak ditemukan: {$realPath}");
-        }
-
-        self::$putTestFilePath = $realPath;
     }
 
-    protected function runPutWithIdAndData(int $id, array $data): array
+    public function testUpdateUserSuccess(ApiTester $I)
     {
-        $overridePath = SubmissionTestHelper::generateAutoPrependFile(
-            ['id' => $id, 'data' => $data],
-            'override_put_data.php',
-            '$id,$data'
-        );
+        $user = json_decode(file_get_contents(codecept_output_dir() . 'test_user_id.json'), true);
+        $id = $user['id'];
 
-        $command = escapeshellcmd(self::$phpBinary)
-            . ' -d auto_prepend_file=' . escapeshellarg($overridePath)
-            . ' ' . escapeshellarg(self::$putTestFilePath);
-
-        $output = shell_exec($command);
-        SubmissionTestHelper::cleanupOverrideFile();
-
-        $decoded = json_decode($output, true);
-        $httpCode = 200;
-
-        if (!is_array($decoded)) {
-            $httpCode = 500;
-        } elseif (($decoded['status'] ?? '') === 'error') {
-            $httpCode = str_contains($decoded['message'], 'wajib') ? 400 : 404;
-        }
-
-        return ['http_code' => $httpCode, 'body' => $output];
+        $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
+        $I->sendPOST($this->path, [
+            'id' => $id,
+            'name' => 'Updated codecept user',
+            'email' => 'updatedcodeceptuser@gmail.com'
+        ]);
+        $I->seeResponseCodeIs(200);
+        $I->seeResponseIsJson();
+        $I->seeResponseContainsJson([
+            'status' => 'success',
+            'message' => 'User berhasil diperbarui'
+        ]);
     }
 
-    protected function assertJsonResponse(ApiTester $I, array $result, int $expectedCode, string $mustContain)
+    public function testUpdateUserPartialSuccess(ApiTester $I)
     {
-        $output = $result['body'];
-        $code = $result['http_code'];
+        $user = json_decode(file_get_contents(codecept_output_dir() . 'test_user_id.json'), true);
+        $id = $user['id'];
 
-        $I->comment("Output: $output");
-        $I->assertEquals($expectedCode, $code, "Expected HTTP $expectedCode, got $code");
-        $I->assertStringContainsString($mustContain, $output);
+        // Update hanya salah satu field (name saja)
+        $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
+        $I->sendPOST($this->path, [
+            'id' => $id,
+            'name' => 'Name Only Updated codecept user'
+        ]);
+        $I->seeResponseCodeIs(200);
+        $I->seeResponseIsJson();
+        $I->seeResponseContainsJson([
+            'status' => 'success'
+        ]);
     }
 
-    protected function getNextAvailableId(): int
+    public function testUpdateUserFailNoId(ApiTester $I)
     {
-        $conn = new \mysqli('127.0.0.1', 'root', '', 'test_db');
-        $result = $conn->query("SELECT MAX(id) as max_id FROM users");
-        $row = $result->fetch_assoc();
-        $conn->close();
-
-        return ($row['max_id'] ?? 0) + 1;
+        $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
+        $I->sendPOST($this->path, [
+            'name' => 'Should Fail'
+        ]);
+        $I->seeResponseCodeIs(400);
+        $I->seeResponseIsJson();
+        $I->seeResponseContainsJson([
+            'status' => 'error',
+            'message' => 'ID dan minimal satu field update harus diisi'
+        ]);
     }
 
-    public function testSuccessfulUpdate(ApiTester $I)
+    public function testUpdateUserFailNoFields(ApiTester $I)
     {
-        // Ambil ID baru yang belum ada di database
-        $id = $this->getNextAvailableId();
-
-        // Insert user original (sebelum diupdate)
-        $conn = new \mysqli('127.0.0.1', 'root', '', 'test_db');
-        $stmt = $conn->prepare("INSERT INTO users (id, username, name, email, prodi) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param('issss', $id, $username, $name, $email, $prodi);
-
-        $username = 'putuser_original';
-        $name     = 'Put User';
-        $email    = 'put@example.com';
-        $prodi    = 'Teknik Mesin';
-        $stmt->execute();
-        $stmt->close();
-        $conn->close();
-
-        // Data yang akan digunakan untuk update
-        $data = [
-            'username' => 'putuser_updated_' . uniqid(),
-            'name'     => 'Put User Updated',
-            'email'    => 'put.updated.' . uniqid() . '@example.com',
-            'prodi'    => 'Teknik Komputer'
-        ];
-
-        $result = $this->runPutWithIdAndData($id, $data);
-        $this->assertJsonResponse($I, $result, 200, 'success');
-
-        self::$usersToDelete[] = $data;
+        $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
+        $I->sendPOST($this->path, [
+            'id' => 99999999, // id valid tapi tanpa field update
+        ]);
+        $I->seeResponseCodeIs(400);
+        $I->seeResponseIsJson();
+        $I->seeResponseContainsJson([
+            'status' => 'error',
+            'message' => 'ID dan minimal satu field update harus diisi'
+        ]);
     }
 
-    public function testUpdateWithMissingFields(ApiTester $I)
+    public function testUpdateUserNotFound(ApiTester $I)
     {
-        $data = [
-            'username' => 'putuser_missing'
-        ];
-
-        $result = $this->runPutWithIdAndData(1, $data);
-        $this->assertJsonResponse($I, $result, 400, 'error');
-    }
-
-    public function testUpdateNonexistentId(ApiTester $I)
-    {
-        $id = $this->getNextAvailableId(); // pastikan ID ini belum ada
-        $data = [
-            'username' => 'user_nexist',
-            'name'     => 'Does Not Exist',
-            'email'    => 'usernx@example.com',
-            'prodi'    => 'Teknik Kimia'
-        ];
-
-        $result = $this->runPutWithIdAndData($id, $data);
-        $this->assertJsonResponse($I, $result, 404, 'error');
-
-        // tetap tambahkan ke cleanup untuk jaga-jaga kalau test gagal dan user terbuat
-        self::$usersToDelete[] = $data;
-    }
-
-    public function _after(ApiTester $I)
-    {
-        foreach (self::$usersToDelete as $user) {
-            $I->cleanupInsertedUser($user['username'], $user['email']);
-        }
-
-        self::$usersToDelete = [];
-        SubmissionTestHelper::cleanupOverrideFile();
+        $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
+        $I->sendPOST($this->path, [
+            'id' => 99999999, // id tidak ada di db
+            'name' => 'No User'
+        ]);
+        $I->seeResponseCodeIs(404);
+        $I->seeResponseIsJson();
+        $I->seeResponseContainsJson([
+            'status' => 'error',
+            'message' => 'User tidak ditemukan atau data sama'
+        ]);
     }
 }

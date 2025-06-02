@@ -7,6 +7,7 @@ use Barryvdh\DomPDF\PDF;
 use App\Models\RestApi\Task;
 use Illuminate\Http\Request;
 use App\Models\RestApi\Topic;
+use App\Models\RestApi\Feedback;
 use App\Models\RestApi\Submission;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
@@ -160,7 +161,7 @@ class TeacherController extends Controller
         $submissionId = $request->query('submission_id');
 
         // Ambil submission spesifik
-        $submission = Submission::with(['user', 'task.topic', 'feedback'])
+        $submission = Submission::with(['user', 'task.topic', 'feedbacks'])
             ->where('user_id', $userId)
             ->where('task_id', $taskId)
             ->where('id', $submissionId)
@@ -180,7 +181,6 @@ class TeacherController extends Controller
         $intervalData = $this->getSubmitIntervalForSubmission($submission);
 
         $stats = $this->getSubmissionStats($submissionId, $userId, $taskId);
-        $totalSubmissions = $stats['total'];
         $submissionPosition = $stats['position'];
 
         $filesContent = [[
@@ -193,7 +193,6 @@ class TeacherController extends Controller
             'run_output'   => $submission->feedback->run_output ?? 'No Run Output',
             'test_result'  => $submission->feedback->test_result ?? 'No Test Result',
             'interval'     => $intervalData,
-            'total_submissions' => $totalSubmissions,
             'submission_position' => $submissionPosition,
             'created_at'   => $submission->created_at->format('Y-m-d H:i:s'),
         ]];
@@ -206,26 +205,38 @@ class TeacherController extends Controller
 
     public function getSubmitIntervalForSubmission(Submission $currentSubmission)
     {
-        $previous = Submission::where('user_id', $currentSubmission->user_id)
-            ->where('task_id', $currentSubmission->task_id)
-            ->where('created_at', '<', $currentSubmission->created_at)
-            ->orderByDesc('created_at')
-            ->first();
+        // Ambil feedback terkait current submission, ambil waktu created_at feedback
+        $currentFeedback = $currentSubmission->feedbacks()->latest()->first();
 
-        if (!$previous) {
+        if (!$currentFeedback) {
+            // Jika current submission belum punya feedback, return null
             return null;
         }
 
-        $intervalReadable = $previous->created_at->diffForHumans($currentSubmission->created_at, [
+        // Cari feedback sebelumnya untuk user dan task yang sama, dengan waktu feedback sebelum current feedback
+        $previousFeedback = Feedback::whereHas('submission', function ($q) use ($currentSubmission) {
+                $q->where('user_id', $currentSubmission->user_id)
+                ->where('task_id', $currentSubmission->task_id);
+            })
+            ->where('created_at', '<', $currentFeedback->created_at)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (!$previousFeedback) {
+            return null;
+        }
+
+        // Hitung interval antara previous feedback dan current feedback
+        $intervalReadable = $previousFeedback->created_at->diffForHumans($currentFeedback->created_at, [
             'parts' => 3,
             'short' => true,
         ]);
 
-        $intervalInSeconds = $previous->created_at->diffInSeconds($currentSubmission->created_at);
+        $intervalInSeconds = $previousFeedback->created_at->diffInSeconds($currentFeedback->created_at);
 
         return [
-            'from' => $previous->created_at->toDateTimeString(),
-            'to' => $currentSubmission->created_at->toDateTimeString(),
+            'from' => $previousFeedback->created_at->toDateTimeString(),
+            'to' => $currentFeedback->created_at->toDateTimeString(),
             'interval_readable' => $intervalReadable,
             'interval_seconds' => $intervalInSeconds,
         ];
@@ -233,25 +244,28 @@ class TeacherController extends Controller
 
     protected function getSubmissionStats($submissionId, $userId, $taskId)
     {
-        // Ambil semua ID submission untuk user dan task terkait, diurutkan
-        $submissionIds = Submission::where('user_id', $userId)
-            ->where('task_id', $taskId)
-            ->orderBy('created_at') // atau 'id' jika tidak ada timestamp
-            ->pluck('id')
-            ->toArray();
+        // Ambil semua feedback untuk submission tertentu, diurutkan berdasarkan created_at
+        $feedbacks = Feedback::where('submission_id', $submissionId)
+            ->orderBy('created_at')
+            ->get();
 
-        // Hitung posisi submission keberapa (index + 1)
-        $submissionNumber = array_search($submissionId, $submissionIds);
-        if ($submissionNumber === false) {
+        $totalFeedback = $feedbacks->count();
+
+        if ($totalFeedback == 0) {
             return [
-                'total' => count($submissionIds),
-                'position' => null, // submission tidak ditemukan
+                'position' => null,
             ];
         }
 
+        // Ambil feedback terbaru (misal feedback terakhir) dan cari posisinya
+        $latestFeedback = $feedbacks->last();
+
+        $position = $feedbacks->search(function ($feedback) use ($latestFeedback) {
+            return $feedback->id === $latestFeedback->id;
+        });
+
         return [
-            'total' => count($submissionIds),
-            'position' => $submissionNumber + 1, // index mulai dari 0
+            'position' => $position !== false ? $position + 1 : null,
         ];
     }
 }

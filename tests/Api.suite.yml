@@ -2,9 +2,7 @@ actor: ApiTester
 modules:
     enabled:
         - Laravel
-        - Tests\Support\Helper\DbHelper
-        - Tests\Support\Helper\SubmissionTestHelper
         - REST:
-            url: 'http://localhost/iclop/public'
+            url: 'http://localhost/iclop/public/'
             depends: PhpBrowser
         - Asserts

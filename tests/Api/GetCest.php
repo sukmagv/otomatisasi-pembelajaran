@@ -1,99 +1,62 @@
 <?php
 
 use Tests\Support\ApiTester;
-use Tests\Support\Helper\SubmissionTestHelper;
 
 class GetCest
 {
-    protected static string $phpBinary = 'C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe';
-
-    // nullable string, diinisialisasi null agar tidak error saat akses pertama kali
-    protected static ?string $getFilePath = null;
-
+    protected $path;
     public function _before(ApiTester $I)
     {
-        if (!self::$getFilePath) {
-            $configFile = codecept_root_dir() . 'tests/test-config.json';
-            if (!file_exists($configFile)) {
-                throw new \RuntimeException("Config file tidak ditemukan: {$configFile}");
-            }
+        $jsonPath = codecept_root_dir() . 'tests/test-config.json';
+        $json = file_get_contents($jsonPath);
+        $data = json_decode($json, true);
 
-            $config = json_decode(file_get_contents($configFile), true);
-            $realPath = $config['testFile'] ?? null;
-            if (!$realPath || !file_exists($realPath)) {
-                throw new \RuntimeException("File get.php tidak ditemukan: {$realPath}");
-            }
+        $rawPath = $data['testFile'];
+        $this->path = str_replace('\\', '/', $rawPath);
 
-            self::$getFilePath = $realPath;
+        // Validasi: hanya izinkan file post.php
+        $filename = basename($this->path);
+        if ($filename !== 'get.php') {
+            throw new \Exception("File yang diuji bukan 'get.php', tetapi '{$filename}'");
         }
     }
 
-    protected function runGetWithId(?int $id): array
+    public function testGetUserByIdSuccess(ApiTester $I)
     {
-        // Generate override file yang set variabel $id (misal: $id = 5;)
-        $overridePath = SubmissionTestHelper::generateAutoPrependFile(['id' => $id], 'override_get_id.php', '$id');
+        $user = json_decode(file_get_contents(codecept_output_dir() . 'test_user_id.json'), true);
+        $id = $user['id'];
 
-        $command = escapeshellcmd(self::$phpBinary)
-            . ' -d auto_prepend_file=' . escapeshellarg($overridePath)
-            . ' ' . escapeshellarg(self::$getFilePath);
-
-        $output = shell_exec($command);
-
-        SubmissionTestHelper::cleanupOverrideFile();
-
-        $decoded = json_decode($output, true);
-        $httpCode = 200;
-
-        if (!is_array($decoded)) {
-            $httpCode = 500;
-        } elseif (($decoded['status'] ?? '') === 'error') {
-            if (str_contains($decoded['message'] ?? '', 'tidak ditemukan')) {
-                $httpCode = 404;
-            } else {
-                $httpCode = 400;
-            }
-        }
-
-        return ['http_code' => $httpCode, 'body' => $output];
+        $I->haveHttpHeader('Accept', 'application/json');
+        $I->sendGET($this->path, ['id' => $id]);
+        $I->seeResponseCodeIs(200);
+        $I->seeResponseIsJson();
+        $I->seeResponseContainsJson([
+            'status' => 'success',
+        ]);
+        $I->seeResponseContainsJson(['data' => ['id' => $id]]);
     }
 
-    protected function assertJsonResponse(ApiTester $I, array $result, int $expectedCode, string $mustContain)
+    public function testGetUserByIdNotFound(ApiTester $I)
     {
-        $output = $result['body'];
-        $code = $result['http_code'];
-
-        $I->comment("Output: $output");
-        $I->assertEquals($expectedCode, $code, "Expected HTTP $expectedCode, got $code");
-        $I->assertStringContainsString($mustContain, $output);
+        $I->haveHttpHeader('Accept', 'application/json');
+        $I->sendGET($this->path, ['id' => 99999999]);
+        $I->seeResponseCodeIs(404);
+        $I->seeResponseIsJson();
+        $I->seeResponseContainsJson([
+            'status' => 'error',
+            'message' => 'User tidak ditemukan',
+        ]);
     }
 
     public function testGetAllUsers(ApiTester $I)
     {
-        // id null untuk get all
-        $result = $this->runGetWithId(null);
-        $this->assertJsonResponse($I, $result, 200, 'success');
-    }
-
-    public function testGetUserByValidId(ApiTester $I)
-    {
-        $conn = new \mysqli('127.0.0.1', 'root', '', 'test_db');
-        $result = $conn->query("SELECT id FROM users LIMIT 1");
-        $row = $result->fetch_assoc();
-        $conn->close();
-
-        if (!$row) {
-            $I->fail("Tidak ada data user yang tersedia untuk diuji. Buat data user terlebih dahulu.");
-            return;
-        }
-
-        $validId = (int) $row['id'];
-        $result = $this->runGetWithId($validId);
-        $this->assertJsonResponse($I, $result, 200, 'success');
-    }
-
-    public function testGetUserByInvalidId(ApiTester $I)
-    {
-        $result = $this->runGetWithId(9999999);
-        $this->assertJsonResponse($I, $result, 404, 'error');
+        $I->haveHttpHeader('Accept', 'application/json');
+        $I->sendGET($this->path);
+        $I->seeResponseCodeIs(200);
+        $I->seeResponseIsJson();
+        $I->seeResponseContainsJson([
+            'status' => 'success',
+        ]);
+        $I->seeResponseContainsJson(['data' => []]); // Minimal data harus array (bisa kosong)
     }
 }

@@ -365,11 +365,15 @@
                                 // Ambil task lain selain task ini
                                 $otherTasks = $tasks->where('id', '!=', $currentTaskId);
                             @endphp
-                            <label for="editTaskFlag" class="form-label">Need Submission?</label>
-                            <select class="form-control" id="editTaskFlag" name="flag" required>
-                                <option value="1" {{ $task->flag == 1 ? 'selected' : '' }}>Yes</option>
-                                <option value="0" {{ $task->flag == 0 ? 'selected' : '' }}>No</option>
-                            </select>
+                            @if(isset($task))
+                                <label for="editTaskFlag" class="form-label">Need Submission?</label>
+                                <select class="form-control" id="editTaskFlag" name="flag" required>
+                                    <option value="1" {{ $task->flag == 1 ? 'selected' : '' }}>Yes</option>
+                                    <option value="0" {{ $task->flag == 0 ? 'selected' : '' }}>No</option>
+                                </select>
+                            @else
+                                <p>Tidak ada task untuk ditampilkan.</p>
+                            @endif
                             <!-- Input File -->
                             <label for="editTaskFile" class="form-label">Upload PDF (Kosongkan jika tidak ingin mengubah)</label>
                             <input type="file" class="form-control" id="editTaskFile" name="file_path" accept=".pdf">

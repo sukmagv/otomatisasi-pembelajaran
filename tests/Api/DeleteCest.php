@@ -1,124 +1,66 @@
 <?php
 
 use Tests\Support\ApiTester;
-use Tests\Support\Helper\SubmissionTestHelper;
 
 class DeleteCest
 {
-    protected static string $phpBinary = 'C:\laragon\bin\php\php-8.1.10-Win32-vs16-x64\php.exe';
-    protected static string $deleteTestFilePath;
-    protected static $usersToDelete = [];
-
+    protected $path;
     public function _before(ApiTester $I)
     {
-        $configFile = codecept_root_dir() . 'tests/test-config.json';
-        if (!file_exists($configFile)) {
-            throw new \RuntimeException("Config file tidak ditemukan: {$configFile}");
+        $jsonPath = codecept_root_dir() . 'tests/test-config.json';
+        $json = file_get_contents($jsonPath);
+        $data = json_decode($json, true);
+
+        $rawPath = $data['testFile'];
+        $this->path = str_replace('\\', '/', $rawPath);
+
+        // Validasi: hanya izinkan file post.php
+        $filename = basename($this->path);
+        if ($filename !== 'delete.php') {
+            throw new \Exception("File yang diuji bukan 'delete.php', tetapi '{$filename}'");
         }
-
-        $config = json_decode(file_get_contents($configFile), true);
-        $realPath = $config['testFile'] ?? null;
-        if (!$realPath || !file_exists($realPath)) {
-            throw new \RuntimeException("File delete.php tidak ditemukan: {$realPath}");
-        }
-
-        self::$deleteTestFilePath = $realPath;
     }
 
-    protected function runDeleteWithId(?int $id): array
+    public function testDeleteUserSuccess(ApiTester $I)
     {
-        $overridePath = SubmissionTestHelper::generateAutoPrependFile(['id' => $id], 'override_delete_id.php', '$id');
+        $user = json_decode(file_get_contents(codecept_output_dir() . 'test_user_id.json'), true);
+        $id = $user['id'];
 
-        $command = escapeshellcmd(self::$phpBinary)
-            . ' -d auto_prepend_file=' . escapeshellarg($overridePath)
-            . ' ' . escapeshellarg(self::$deleteTestFilePath);
-
-        $output = shell_exec($command);
-        SubmissionTestHelper::cleanupOverrideFile();
-
-        $decoded = json_decode($output, true);
-        $httpCode = 200;
-
-        if (!is_array($decoded)) {
-            $httpCode = 500;
-        } elseif (($decoded['status'] ?? '') === 'error') {
-            $httpCode = str_contains($decoded['message'], 'wajib') ? 400 : 404;
-        }
-
-        return ['http_code' => $httpCode, 'body' => $output];
+        $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
+        $I->sendPOST($this->path, [
+            'id' => $id
+        ]);
+        $I->seeResponseCodeIs(200);
+        $I->seeResponseIsJson();
+        $I->seeResponseContainsJson([
+            'status' => 'success',
+            'message' => 'User berhasil dihapus'
+        ]);
     }
 
-    protected function assertJsonResponse(ApiTester $I, array $result, int $expectedCode, string $mustContain)
+    public function testDeleteUserFailNoId(ApiTester $I)
     {
-        $output = $result['body'];
-        $code = $result['http_code'];
-
-        $I->comment("Output: $output");
-        $I->assertEquals($expectedCode, $code, "Expected HTTP $expectedCode, got $code");
-        $I->assertStringContainsString($mustContain, $output);
+        $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
+        $I->sendPOST($this->path, []);
+        $I->seeResponseCodeIs(400);
+        $I->seeResponseIsJson();
+        $I->seeResponseContainsJson([
+            'status' => 'error',
+            'message' => 'ID user harus diisi'
+        ]);
     }
 
-    protected function getNextAvailableId(): int
+    public function testDeleteUserNotFound(ApiTester $I)
     {
-        $conn = new \mysqli('127.0.0.1', 'root', '', 'test_db');
-        $result = $conn->query("SELECT MAX(id) as max_id FROM users");
-        $row = $result->fetch_assoc();
-        $conn->close();
-
-        return ($row['max_id'] ?? 0) + 1;
-    }
-
-    public function testDeleteExistingUser(ApiTester $I)
-    {
-        // Dapatkan ID baru yang belum ada
-        $id = $this->getNextAvailableId();
-
-        // Data user untuk disisipkan
-        $username = 'deleteuser_' . uniqid();
-        $email    = 'delete_' . uniqid() . '@example.com';
-
-        // Insert user
-        $conn = new \mysqli('127.0.0.1', 'root', '', 'test_db');
-        $stmt = $conn->prepare("INSERT INTO users (id, username, name, email, prodi) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param('issss', $id, $username, $name, $email, $prodi);
-
-        $name  = 'Delete User';
-        $prodi = 'Teknik Kimia';
-        $stmt->execute();
-        $stmt->close();
-        $conn->close();
-
-        // Jalankan delete
-        $result = $this->runDeleteWithId($id);
-        $this->assertJsonResponse($I, $result, 200, 'success');
-
-        self::$usersToDelete[] = [
-            'username' => $username,
-            'email'    => $email
-        ];
-    }
-
-    public function testDeleteNonexistentUser(ApiTester $I)
-    {
-        $id = $this->getNextAvailableId();
-
-        $result = $this->runDeleteWithId($id);
-        $this->assertJsonResponse($I, $result, 404, 'error');
-    }
-
-    public function testDeleteWithoutId(ApiTester $I)
-    {
-        $result = $this->runDeleteWithId(null);
-        $this->assertJsonResponse($I, $result, 404, 'error');
-    }
-    
-    public function _after(ApiTester $I)
-    {
-        foreach (self::$usersToDelete as $user) {
-            $I->cleanupInsertedUser($user['username'], $user['email']);
-        }
-
-        self::$usersToDelete = [];
-        SubmissionTestHelper::cleanupOverrideFile();
+        $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
+        $I->sendPOST($this->path, [
+            'id' => 99999999
+        ]);
+        $I->seeResponseCodeIs(404);
+        $I->seeResponseIsJson();
+        $I->seeResponseContainsJson([
+            'status' => 'error',
+            'message' => 'User tidak ditemukan'
+        ]);
     }
 }

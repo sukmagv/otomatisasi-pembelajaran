@@ -12,9 +12,12 @@ Route::group(['middleware' => ['auth', 'student']], function() {
         Route::post('/submit-task', [RestApiController::class, 'submit_task'])->name('restapi_submit_task');
         Route::get('/get-progress', [RestApiController::class, 'getProgress'])->name('restapi_get_progress');
         Route::post('/verify', [RestApiController::class, 'runCodeceptionTest'])->name('restapi_verify');
-        Route::post('/run-api', [RestApiController::class, 'runFile'])->name('restapi_run_api');
+        Route::get('/hasil-parktikum/{username}',[RestApiController::class, 'runIndex'])->name('restapi_run_test_index');
     });
 });
+
+Route::get('/run-test/{username}',[RestApiController::class, 'runIndex']);
+Route::match(['get', 'post', 'put', 'delete'], '/run-test/{username}/{filename}', [RestApiController::class, 'runTest']);
 
 
 Route::group(['middleware' => ['auth', 'teacher']], function() {

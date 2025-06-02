@@ -157,6 +157,12 @@
         .list-group-item {
             border: none !important; /* Hapus border antar task */
         }
+
+        #feedbackMessage {
+            white-space: pre-wrap;     /* Bungkus teks seperti <pre>, tapi tetap bisa wrap */
+            word-wrap: break-word;     /* Paksa kata panjang agar bisa dipotong dan dibungkus */
+            overflow-wrap: break-word; /* Modern equivalent */
+        }
     </style>
     
     <style>
@@ -214,7 +220,7 @@
         </div>
         <div id="progress">{{ session('progress', 0) }}%</div>
         
-        <div class="accordion" id="topicsAccordion" style="margin-top: 20px;">
+        <div class="accordion" id="topicsAccordion" style="margin-top: 10px;">
             @foreach($topics as $topic)
                 @php
                     // Ambil task dengan module_type = 1 untuk setiap topic
@@ -269,7 +275,13 @@
                     </div>
                 </div>
             @endforeach
-        </div>                
+        </div>
+        <!-- Link Run HTML di luar ul, paling bawah -->
+        <div class="mt-3 mb-3" style="padding-left: 20px; padding-bottom: 50px;">
+            <a href="{{ route('restapi_run_test_index', ['username' => $user->name]) }}" class="text text-list" target="_blank">
+                <b>Run HTML</b>
+            </a>
+        </div>   
     </div>
 
     <div style="padding: 20px; max-width: 68%; margin-left:5px;">
@@ -290,17 +302,26 @@
                 <p class='text-list' style='font-size: 24px; font-weight: 600;width: 400px !important;'> Upload File Practicum </p>
                 <div class="texts" style="position: relative;">
                     {{-- Upload + Verify Form --}}
-                    <form action="{{ Route('restapi_submit_task') }}" method="POST" enctype="multipart/form-data">
+                    <form id="uploadForm" action="{{ Route('restapi_submit_task') }}" method="POST" enctype="multipart/form-data">
                         {{ csrf_field() }}
                         <input type="hidden" name="task_id" value="{{ old('task_id', request()->query('task_id')) }}">
 
                         {{-- Show Uploaded File --}}
                         @if($submission && $submission->submit_path)
-                            <div class="form-group mb-3">
+                            <div class="form-group mb-3" id="uploadedFileContainer">
                                 <label>Uploaded File:</label><br>
-                                <a href="{{ request()->fullUrlWithQuery(['view_file' => true]) }}" target="_blank">
+                                <a 
+                                    id="uploadedFileLink"
+                                    href="{{ request()->fullUrlWithQuery(['view_file' => true]) }}" 
+                                    target="_blank"
+                                >
                                     {{ basename($submission->submit_path) }}
                                 </a>
+                            </div>
+                        @else
+                            <div class="form-group mb-3 d-none" id="uploadedFileContainer">
+                                <label>Uploaded File:</label><br>
+                                <a id="uploadedFileLink" href="" target="_blank"></a>
                             </div>
                         @endif
 
@@ -314,7 +335,7 @@
                                 placeholder="{{ $submission ? basename($submission->submit_path) : '.php file' }}"
                                 {{ $submission ? '' : 'required' }}
                             >
-                            <small>Enter the work results <code>.php </code> (Max: 2MB)</small>
+                            <small>Enter the work results <code>.php | .html</code> (Max: 2MB)</small>
                         </div>
 
                         {{-- Comment --}}
@@ -333,29 +354,11 @@
                         <div class="form-group d-flex" style="gap: 10px; margin-bottom: 20px;">
                             <button type="submit" class="btn btn-primary">Upload</button>
                         </div>
-
-                        {{-- Success Message --}}
-                        @if (session('success'))
-                            <div class="alert alert-success mt-3">
-                                {{ session('success') }}
-                            </div>
-                        @endif
-
-                        {{-- Error Message --}}
-                        @if ($errors->any())
-                            <div class="alert alert-danger mt-3">
-                                <ul>
-                                    @foreach ($errors->all() as $error)
-                                        <li>{{ $error }}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        @endif
+                        <div id="uploadMessage" class="mb-3"></div>
                     </form>
 
                     {{-- Verify Button --}}
-
-                    <form action="{{ route('restapi_verify') }}" method="POST" style="display: inline;">
+                    <form id="verifyForm" action="{{ route('restapi_verify') }}" method="POST" style="display: inline;">
                         {{-- Verify Button --}}
                         {{ csrf_field() }}
                         @csrf
@@ -364,16 +367,72 @@
                             Verify
                         </button>
                     </form>
+                    
+                    <div id="verifyMessage" class="mt-3"></div>
 
-                    {{-- Feedback Section --}}
-                    @if(session('test_result') || $testResult)
-                        <div class="mt-3" style="border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+                    @php
+                        // Pastikan $testResult dalam bentuk array
+                        if (is_array($testResult)) {
+                            $feedbackData = $testResult;
+                        } elseif (is_string($testResult)) {
+                            $decoded = json_decode($testResult, true);
+                            $feedbackData = is_array($decoded) ? $decoded : [];
+                        } else {
+                            $feedbackData = [];
+                        }
+
+                        // Siapkan $errorLines hanya jika ada, supaya tidak tampil "baris ke--"
+                        $errorLines = '-';
+                        if (isset($feedbackData['error_lines'])) {
+                            $lines = $feedbackData['error_lines'];
+                            if (is_array($lines)) {
+                                $errorLines = implode(', ', $lines);
+                            } elseif (is_string($lines) || is_numeric($lines)) {
+                                $errorLines = $lines;
+                            }
+                        }
+
+                        // Cek apakah feedback seharusnya ditampilkan
+                        $hasFeedback = !empty($feedbackData['version']) 
+                                    || !empty($feedbackData['duration']) 
+                                    || !empty($feedbackData['memory']) 
+                                    || !empty($feedbackData['message']) 
+                                    || !empty($feedbackData['error_lines']);
+
+                        // Tentukan apakah message adalah array baru (array of objects)
+                        $isMessageArray = isset($feedbackData['message']) && is_array($feedbackData['message']);
+                    @endphp
+
+                    @if($hasFeedback)
+                        <div id="feedbackSection" class="mt-3" style="border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
                             <h5><b>Feedback:</b></h5>
-                            <pre>{{ session('test_result') ?? $testResult }}</pre>
+
+                            <p><strong>Versi Codeception:</strong> {{ $feedbackData['version'] ?? '-' }}</p>
+                            <p><strong>Durasi:</strong> {{ $feedbackData['duration'] ?? '-' }}</p>
+                            <p><strong>Memory:</strong> {{ $feedbackData['memory'] ?? '-' }}</p>
+                            @if(!empty($feedbackData['error_lines']))
+                                <p><strong>Error:</strong> baris ke-{{ $errorLines }}</p>
+                            @endif
+
+                            <p><strong>Pesan:</strong></p>
+                            <div style="text-align: justify; margin-bottom: 20px;">
+                                @if($isMessageArray)
+                                    @foreach($feedbackData['message'] as $msg)
+                                        {{ $msg['title'] ?? 'Judul tidak tersedia' }}<br>
+                                        <ul class="text-base">
+                                            @foreach($msg['errors'] ?? [] as $err)
+                                                <li>{!! nl2br(e($err)) !!}</li>
+                                            @endforeach
+                                        </ul>
+                                    @endforeach
+                                @else
+                                    {!! nl2br(e(ltrim($feedbackData['message'] ?? '-'))) !!}
+                                @endif
+                            </div>
                         </div>
                     @endif
-                    
-                    @if (!empty($runOutput))
+
+                    {{-- @if (!empty($runOutput))
                         @php
                             $result = ['output' => $runOutput];
                         @endphp
@@ -384,7 +443,7 @@
                                 <pre>{{ json_encode($result['output'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
                             @endif
                         </div>
-                    @endif
+                    @endif --}}
                 </div>
             </div>
         </div>
@@ -501,6 +560,163 @@
 
         setInterval(updateTimer, 1000);
 
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const uploadForm = document.getElementById("uploadForm");
+            const messageDiv = document.getElementById("uploadMessage");
+            const uploadedFileContainer = document.getElementById("uploadedFileContainer");
+            const uploadedFileLink = document.getElementById("uploadedFileLink");
+            const verifyForm = document.getElementById("verifyForm");
+
+            uploadForm.addEventListener("submit", function (e) {
+                e.preventDefault();
+
+                const formData = new FormData(uploadForm);
+                messageDiv.innerHTML = 'Uploading...';
+
+                fetch(uploadForm.action, {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(async (response) => {
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Upload error');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    messageDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                    if (data.test_result) {
+                        messageDiv.innerHTML += `<pre>${data.test_result}</pre>`;
+                    }
+
+                    const fileInput = uploadForm.querySelector('input[name="file"]');
+                    const uploadedFile = fileInput.files[0];
+                    const fileName = uploadedFile.name;
+
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.set("view_file", "true");
+                    uploadedFileLink.href = currentUrl.toString();
+                    uploadedFileLink.textContent = fileName;
+
+                    // Show container (in case it was hidden before)
+                    uploadedFileContainer.classList.remove("d-none");
+                })
+                .catch(error => {
+                    messageDiv.innerHTML = `<div class="alert alert-danger">Upload failed: ${error.message}</div>`;
+                    console.error(error);
+                });
+            });
+
+            verifyForm.addEventListener("submit", function (e) {
+                e.preventDefault();
+
+                // Sembunyikan feedback saat user klik Verify agar feedback hilang
+                const feedbackDiv = document.getElementById('feedbackSection');
+                if (feedbackDiv) {
+                    feedbackDiv.style.display = 'none';
+                }
+
+                const formData = new FormData(verifyForm);
+                const messageDiv = document.getElementById("verifyMessage");
+                messageDiv.innerHTML = 'Verifying...';
+
+                fetch(verifyForm.action, {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(async response => {
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Verification error');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    messageDiv.innerHTML = `<div class="alert alert-success">Verification successful!</div>`;
+
+                    if (data.testResult && hasValidFeedback(data.testResult)) {
+                        const feedbackDiv = document.querySelector('#feedbackSection') || createFeedbackSection();
+                        const feedbackData = data.testResult;
+
+                        const errorLines = Array.isArray(feedbackData.error_lines)
+                            ? feedbackData.error_lines.join(', ')
+                            : (feedbackData.error_lines || '-');
+
+                        let messageHTML = '';
+
+                        if (Array.isArray(feedbackData.message)) {
+                            // Format baru: message array dengan title dan errors
+                            feedbackData.message.forEach(msg => {
+                                messageHTML += `<b>${msg.title || 'Judul tidak tersedia'}</b><br><ul>`;
+                                if (Array.isArray(msg.errors)) {
+                                    msg.errors.forEach(err => {
+                                        messageHTML += `<li>${err}</li>`;
+                                    });
+                                } else {
+                                    messageHTML += `<li>${msg.errors || '-'}</li>`;
+                                }
+                                messageHTML += '</ul>';
+                            });
+                        } else {
+                            // Format lama: message string biasa
+                            messageHTML = feedbackData.message || '-';
+                        }
+
+                        let errorLineHTML = (errorLines !== '-' && errorLines !== '') 
+                            ? `<p><strong>Error:</strong> baris ke-${errorLines}</p>` 
+                            : '';
+
+                        feedbackDiv.innerHTML = `
+                            <h5><b>Feedback:</b></h5>
+                            <p><strong>Versi Codeception:</strong> ${feedbackData.version || '-'}</p>
+                            <p><strong>Durasi:</strong> ${feedbackData.duration || '-'}</p>
+                            <p><strong>Memory:</strong> ${feedbackData.memory || '-'}</p>
+                            ${errorLineHTML}
+                            <p><strong>Pesan:</strong></p>
+                            <div style="text-align: justify; margin-bottom: 20px;">
+                                ${messageHTML}
+                            </div>
+                        `;
+
+                        feedbackDiv.style.display = 'block';
+                    } else {
+                        const feedbackDiv = document.querySelector('#feedbackSection');
+                        if (feedbackDiv) feedbackDiv.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    messageDiv.innerHTML = `<div class="alert alert-danger">Verification failed: ${error.message}</div>`;
+                    console.error(error);
+                });
+
+                function hasValidFeedback(feedbackData) {
+                    return feedbackData.version || feedbackData.duration || feedbackData.memory || feedbackData.message || (feedbackData.error_lines && feedbackData.error_lines.length);
+                }
+            });
+
+            function createFeedbackSection() {
+                const feedbackDiv = document.createElement('div');
+                feedbackDiv.id = 'feedbackSection';
+                feedbackDiv.classList.add('mt-3');
+                feedbackDiv.style.border = '1px solid #ccc';
+                feedbackDiv.style.padding = '10px';
+                feedbackDiv.style.borderRadius = '5px';
+                verifyForm.parentNode.insertBefore(feedbackDiv, verifyForm.nextSibling);
+                return feedbackDiv;
+            }
+        });
     </script>
 </body>
 

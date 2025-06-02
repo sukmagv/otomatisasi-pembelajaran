@@ -47,8 +47,7 @@
         @else
             <p><strong>Rentang waktu dengan pengumpulan sebelumnya:</strong>-</p>
         @endif
-        <p><strong>Pengumpulan ke-</strong>{{ $file['submission_position'] }}</p>
-        <p><strong>Total Pengumpulan:</strong> {{ $file['total_submissions'] }}</p>
+        <p><strong>Pengumpulan ke-{{ $file['submission_position'] }}</strong></p>
         <h4>Submitted Code:</h4>
         <pre>{{ $file['code'] }}</pre>
         <p><strong>Output:</strong></p>

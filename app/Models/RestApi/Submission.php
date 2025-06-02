@@ -31,9 +31,9 @@ class Submission extends Model
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
-    public function feedback()
+    public function feedbacks()
     {
-        return $this->hasOne(Feedback::class, 'submission_id', 'id');
+        return $this->hasMany(Feedback::class, 'submission_id', 'id');
     }
 
     public function task()

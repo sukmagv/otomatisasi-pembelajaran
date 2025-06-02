@@ -21,18 +21,18 @@ suites:
         actor: ApiTester
         modules:
             enabled:
-                - Laravel
-                - Tests\Support\Helper\DbHelper
-                - Tests\Support\Helper\SubmissionTestHelper
                 - REST:
                     url: 'http://localhost/iclop/public'
                     depends: PhpBrowser
-                - Asserts
     Unit:
         actor: UnitTester
         modules:
             enabled:
-                - Laravel:
-                    database: false
-                    cleanup: true
+                - Laravel
                 - Asserts
+    Functional:
+        actor: FunctionalTester
+        modules:
+            enabled:
+                - PhpBrowser:
+                    url: 'http://iclop.test'
