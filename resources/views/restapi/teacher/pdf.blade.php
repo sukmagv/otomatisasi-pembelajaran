@@ -50,10 +50,8 @@
         <p><strong>Pengumpulan ke-{{ $file['submission_position'] }}</strong></p>
         <h4>Submitted Code:</h4>
         <pre>{{ $file['code'] }}</pre>
-        <p><strong>Output:</strong></p>
-        <pre>{!! nl2br(e($file['run_output'])) !!}</pre>
         <p><strong>Test Result:</strong></p>
-        <pre>{!! nl2br(e($file['test_result'])) !!}</pre>
+        <pre>{{ $file['test_result'] }}</pre>
         <hr>
     @endforeach
 </body>

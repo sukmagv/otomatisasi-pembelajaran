@@ -27,10 +27,15 @@ class RestApiController extends Controller
     {
         $topics = Topic::all();
         $topicsCount = count($topics);
+        $topicFinished = Task::where('flag', 1)
+            ->whereHas('submissions', function ($query) {
+                $query->where('user_id', Auth::id());
+            })->get();
 
         return view('restapi.student.index', [
             'topics' => $topics,
             'topicsCount' => $topicsCount,
+            'topicFinished' => $topicFinished,
         ]);
     }
 
@@ -225,14 +230,13 @@ class RestApiController extends Controller
     public function runCodeceptionTest(Request $request)
     {
         $userId = auth()->id();
+        $username = Auth::user()->name;
         $taskId = $request->input('task_id');
 
         $submission = Submission::where('user_id', $userId)
             ->where('task_id', $taskId)
             ->latest()
             ->firstOrFail();
-
-        // $runOutput = $this->runFile($userId, $taskId);
 
         $submissionPath = public_path("storage/" . $submission->submit_path);
         $topicId = Task::where('id', $taskId)->value('topic_id');
@@ -263,6 +267,7 @@ class RestApiController extends Controller
 
         File::put(base_path('tests/test-config.json'), json_encode([
             'testFile' => str_replace('/', DIRECTORY_SEPARATOR, $relativePath),
+            'username' => $username,
         ]));
 
         $process = new Process([
@@ -293,23 +298,47 @@ class RestApiController extends Controller
         return response()->json([
             'status' => 'success',
             'testResult' => $filteredResult,
-            // 'runOutput' => $runOutput,
         ]);
     }
+
+    // public function runIndex($username)
+    // {
+    //     $phpPath = public_path("storage/restapi/{$username}/index.php");
+    //     $htmlPath = public_path("storage/restapi/{$username}/index.html");
+
+    //     if (File::exists($phpPath)) {
+    //         ob_start();
+    //         include($phpPath);
+    //         $renderedContent = ob_get_clean();
+    //     } elseif (File::exists($htmlPath)) {
+    //         $renderedContent = File::get($htmlPath);
+    //     } else {
+    //         abort(404, 'File not found.');
+    //     }
+
+    //     return view('restapi.runtest', [
+    //         'username' => $username,
+    //         'content' => $renderedContent,
+    //     ]);
+    // }
 
     public function runIndex($username)
     {
         $phpPath = public_path("storage/restapi/{$username}/index.php");
         $htmlPath = public_path("storage/restapi/{$username}/index.html");
 
+        // Validasi: Kalau dua-duanya tidak ada
+        if (!File::exists($phpPath) && !File::exists($htmlPath)) {
+            return redirect()->back()->with('alert', 'Belum upload file Form Manajemen Data.');
+        }
+
+        // Render jika file ada
         if (File::exists($phpPath)) {
             ob_start();
             include($phpPath);
             $renderedContent = ob_get_clean();
-        } elseif (File::exists($htmlPath)) {
-            $renderedContent = File::get($htmlPath);
         } else {
-            abort(404, 'File not found.');
+            $renderedContent = File::get($htmlPath);
         }
 
         return view('restapi.runtest', [
@@ -317,6 +346,31 @@ class RestApiController extends Controller
             'content' => $renderedContent,
         ]);
     }
+
+    // public function runIndex($username)
+    // {
+    //     $phpPath = public_path("storage/restapi/{$username}/index.php");
+    //     $htmlPath = public_path("storage/restapi/{$username}/index.html");
+
+    //     if (!File::exists($phpPath) && !File::exists($htmlPath)) {
+    //         return response()->json([
+    //             'message' => 'Belum upload file Form HTML Manajemen Data.'
+    //         ], 422);
+    //     }
+
+    //     ob_start();
+    //     if (File::exists($phpPath)) {
+    //         include($phpPath);
+    //     } else {
+    //         echo File::get($htmlPath);
+    //     }
+    //     $renderedContent = ob_get_clean();
+
+    //     return response()->json([
+    //         'message' => 'File berhasil dijalankan.',
+    //         'html' => $renderedContent,
+    //     ]);
+    // }
 
     public function runTest($username, $filename)
     {
@@ -380,6 +434,8 @@ class RestApiController extends Controller
 
         // Terjemahan error umum
         $errorTranslations = [
+            'File yang diuji harus bernama db.php' => 'Periksa apakah file db.php sudah benar',
+            'No such host is known' => 'Host database tidak ditemukan. Periksa nama host dan koneksi',
             'Access denied for user' => 'Autentikasi gagal. Periksa username dan password database',
             'Unknown database' => 'Nama database tidak ditemukan. Pastikan database telah dibuat',
             'Connection refused' => 'Tidak dapat terhubung ke server MySQL. Periksa apakah server aktif dan port benar',
@@ -413,31 +469,20 @@ class RestApiController extends Controller
                 }
 
                 $translatedErrors[] = "Nama file yang diuji salah: seharusnya '$expectedFile', tetapi ditemukan '$actualFile'. ";
-                continue; // lanjut ke baris berikutnya, jangan diproses ulang
-            }
-
-            // Tangkap error HTTP status code mismatch
-            if (preg_match('/Expected HTTP Status Code:\s+(\d+)[^\d]+Actual Status Code:\s+(\d+)/i', $line, $match)) {
+                continue;
+            } else if (preg_match('/Expected HTTP Status Code:\s+(\d+)[^\d]+Actual Status Code:\s+(\d+)/i', $line, $match)) {
                 $expected = $match[1];
                 $actual = $match[2];
                 $translatedErrors[] = "Kode status HTTP tidak sesuai. Diharapkan: $expected, tetapi server memberikan: $actual. "
                     . "Periksa apakah input data valid, dan logika kondisi sukses (misal: 201 Created) telah terpenuhi dalam kode PHP.";
                 continue;
-            }
-
-            // Step Fail lebih prioritas
-            if (preg_match('/Step\s+Fail\s+"(.*?)"/', $line, $matches)) {
+            } else if (preg_match('/Step\s+Fail\s+"(.*?)"/', $line, $matches)) {
                 $result['step_fail'] = "Langkah gagal: " . $matches[1];
-            }
-
-            // Tangkap error dari "see" gagal menemukan teks di selector tertentu
-            if (preg_match('/Step\s+See\s+"(.+?)","(.+?)"/i', $line, $match)) {
+            } else if (preg_match('/Step\s+See\s+"(.+?)","(.+?)"/i', $line, $match)) {
                 $teksDicari = $match[1];
                 $selector = $match[2];
 
-                // Cek baris setelahnya apakah mengandung pesan kegagalan
                 if (isset($lines[$i + 1]) && strpos($lines[$i + 1], "Failed asserting that any element by") !== false) {
-                    // Ambil semua elemen tag <selector> yang muncul setelahnya
                     $elemenTersedia = [];
                     for ($j = $i + 2; $j < count($lines); $j++) {
                         $safeSelector = preg_quote($selector, '/');
@@ -452,14 +497,10 @@ class RestApiController extends Controller
 
                     $translatedErrors[] = "Elemen <$selector> dengan teks \"$teksDicari\" tidak ditemukan. Elemen yang tersedia: $elemenStr";
                 }
-            }
-
-            // === Case 2: Step seeElement("form[action=...]") gagal ===
-            elseif (preg_match('/Step\s+See element\s+"(.+?)"/i', $line, $match)) {
-                $selector = $match[1];
+            } else if (preg_match('/Step\s+See element\s+"(.+?\[.*?=.*?\])"/i', $line, $match)) {
+                $selector = stripcslashes($match[1]);
 
                 if (isset($lines[$i + 1]) && strpos($lines[$i + 1], "was not found") !== false) {
-                    // Coba kumpulkan form yang tersedia
                     $availableForms = [];
                     for ($j = $i + 2; $j < count($lines); $j++) {
                         if (preg_match('/<form[^>]*action="([^"]+)"[^>]*>/i', $lines[$j], $m)) {
@@ -473,34 +514,21 @@ class RestApiController extends Controller
 
                     $translatedErrors[] = "Elemen dengan selector `$selector` tidak ditemukan di halaman. $formStr";
                 }
-            }
-
-            // === Case 3: Metode HTTP tidak didukung (POS method error) ===
-            elseif (preg_match('/The (\w+) method is not supported.*Supported methods:\s*(.+?)\./i', $line, $match)) {
-                $method = strtoupper($match[1]); // POS
-                $supported = strtoupper($match[2]); // GET, POST, etc
-
+            } else if (preg_match('/The (\w+) method is not supported.*Supported methods:\s*(.+?)\./i', $line, $match)) {
+                $method = strtoupper($match[1]);
+                $supported = strtoupper($match[2]);
                 $translatedErrors[] = "Metode \"$method\" tidak didukung. Metode yang didukung: $supported.";
-            }
-
-            // ✅ Tambahkan di sini: Tangani warning seperti Undefined variable
-            if (preg_match('/<b>Warning<\/b>:\s+(.*?) in <b>(.*?)<\/b> on line <b>(\d+)<\/b>/', $line, $match)) {
+            } else if (preg_match('/<b>Warning<\/b>:\s+(.*?) in <b>(.*?)<\/b> on line <b>(\d+)<\/b>/', $line, $match)) {
                 $pesan = htmlspecialchars_decode($match[1], ENT_QUOTES);
                 $file = $match[2];
                 $baris = $match[3];
                 $translatedErrors[] = "Peringatan: $pesan pada baris $baris. Kemungkinan variabel belum didefinisikan.";
-            }
-
-            // Tangani error HTML
-            if (preg_match('/<b>Parse error<\/b>:\s+(.+?) in <b>.+?<\/b> on line <b>(\d+)<\/b>/i', $line, $match)) {
-                $pesan = htmlspecialchars_decode($match[1], ENT_QUOTES); // decode &quot;, &lt; dst
+            } else if (preg_match('/<b>Parse error<\/b>:\s+(.+?) in <b>.+?<\/b> on line <b>(\d+)<\/b>/i', $line, $match)) {
+                $pesan = htmlspecialchars_decode($match[1], ENT_QUOTES);
                 $baris = $match[2];
                 $translatedErrors[] = "Kesalahan sintaks: $pesan pada baris $baris. Periksa kembali struktur kode.";
-                continue; // skip agar tidak diproses ulang oleh bagian lain
-            }
-
-            // Deteksi error keyword teknis
-            if (preg_match('/(Parse error|Fatal error|on line \d+|Exception|Error|Gagal mendapatkan koneksi database)/i', $line)) {
+                continue;
+            } else if (preg_match('/(Parse error|Fatal error|on line \d+|Exception|Error|Gagal mendapatkan koneksi database)/i', $line)) {
                 if (strpos($line, 'Invalid json') !== false && preg_match('/System message: (.+)/', $line, $match)) {
                     $translatedErrors[] = "Respons tidak valid: JSON rusak karena ada output lain (seperti warning atau HTML)."
                         . " Pesan sistem: {$match[1]}. Pastikan file tidak mencetak HTML sebelum JSON.";
@@ -518,38 +546,16 @@ class RestApiController extends Controller
                     }
                 }
 
-                // Tangkap error khusus "Gagal mendapatkan koneksi database"
-                if (preg_match('/Gagal mendapatkan koneksi database: (.+?) tidak ditemukan pada: (.+)/', $line, $match)) {
-                    $fileMissing = $match[1];
-                    $path = $match[2];
-                    $translatedErrors[] = "File yang dibutuhkan tidak ditemukan: '$fileMissing' \n"
-                        . "Pastikan file tersebut tersedia dan namanya benar.";
-                }
-
                 if (preg_match('/Fatal error.*mysqli_sql_exception: Table \'([^\']+)\' doesn\'t exist/', $line, $match)) {
                     $namaTabel = $match[1];
                     $translatedErrors[] = "Tabel database tidak ditemukan: '$namaTabel'. Periksa apakah tabel tersebut sudah dibuat dalam database dan penulisan nama tabel sudah benar.";
                 }
 
-                // Tangkap error khusus "Gagal mendapatkan koneksi database"
-                if (preg_match('/Gagal mendapatkan koneksi database: (.+?) tidak ditemukan pada: (.+)/', $line, $match)) {
-                    $fileMissing = $match[1];
-                    $path = $match[2];
-                    $translatedErrors[] = "File yang dibutuhkan tidak ditemukan: '$fileMissing' \n"
-                        . "Pastikan file tersebut tersedia dan namanya benar.";
-                }
-
-                continue; // skip agar tidak diproses ulang oleh bagian lain
-            }
-
-            // Deteksi error asserting dua string identik mulai
-            if (stripos($line, 'Failed asserting that two strings are identical') !== false) {
-                $captureAssertion = true; // Mulai parsing baris Expected & Actual selanjutnya
                 continue;
-            }
-
-            // Parsing Expected & Actual string saat flag capture aktif
-            if ($captureAssertion) {
+            } else if (stripos($line, 'Failed asserting that two strings are identical') !== false) {
+                $captureAssertion = true;
+                continue;
+            } else if ($captureAssertion) {
                 if (preg_match("/^-\'(.+?)\'$/", trim($line), $m)) {
                     $expected = $m[1];
                 } elseif (preg_match("/^\+\'(.+?)\'$/", trim($line), $m)) {
@@ -558,47 +564,31 @@ class RestApiController extends Controller
 
                 if ($expected !== null && $actual !== null) {
                     $translatedErrors[] = "Kesalahan penulisan string. Expected: $expected. Actual: $actual";
-                    // Reset flag dan nilai
                     $captureAssertion = false;
                     $expected = null;
                     $actual = null;
                 }
-            }
-
-            if (preg_match('/^Fail\s+(.*)/', $line, $matches)) {
+            } else if (preg_match('/^Fail\s+(.*)/', $line, $matches)) {
                 $result['fail'] = "Gagal: " . trim($matches[1]);
-            }
-
-            if (preg_match('/require\((.*?)\): Failed to open stream: No such file or directory/i', $line, $match)) {
+            } else if (preg_match('/require\((.*?)\): Failed to open stream: No such file or directory/i', $line, $match)) {
                 $file = $match[1];
                 $translatedErrors[] = "File `$file` tidak ditemukan. Pastikan file tersebut ada dan namanya benar.";
-            }
-
-            if (preg_match('/Fatal error:\s+Uncaught Error: Failed opening required \'(.+?)\'/', $line, $match)) {
+            } else if (preg_match('/Fatal error:\s+Uncaught Error: Failed opening required \'(.+?)\'/', $line, $match)) {
                 $file = $match[1];
                 $translatedErrors[] = "Gagal membuka file `$file`. Periksa apakah file tersebut tersedia dan dapat diakses.";
-            }
-
-            if (preg_match('/on line (\d+)/', $line, $match)) {
+            } else if (preg_match('/on line (\d+)/', $line, $match)) {
                 $translatedErrors[] = "Kesalahan terjadi pada baris ke-" . $match[1] . ". Periksa baris tersebut di file yang disebutkan.";
-            }
-
-            // Deteksi error JSON mismatch
-            if (stripos($line, 'Fail  Response JSON does not contain the provided JSON') !== false) {
+            } else if (stripos($line, 'Fail  Response JSON does not contain the provided JSON') !== false) {
                 $translatedErrors[] = "Respons JSON tidak mengandung struktur yang diharapkan. "
                     . "Pastikan response memiliki key 'status' dan 'message'.";
                 continue;
-            }
-
-            if (preg_match('/- *\'status\' *=> *\'([^\']+)\'/', $line, $match)) {
+            } else if (preg_match('/- *\'status\' *=> *\'([^\']+)\'/', $line, $match)) {
                 $expectedStatus = $match[1];
                 $translatedErrors[] = "Status yang diharapkan: '$expectedStatus' tidak ditemukan dalam response JSON.";
-            }
-            if (preg_match('/- *\'message\' *=> *\'([^\']+)\'/', $line, $match)) {
+            } else if (preg_match('/- *\'message\' *=> *\'([^\']+)\'/', $line, $match)) {
                 $expectedMessage = $match[1];
                 $translatedErrors[] = "Pesan yang diharapkan: '$expectedMessage' tidak ada dalam response JSON.";
-            }
-            if (preg_match('/\+ *\'data\' *=>/', $line)) {
+            } else if (preg_match('/\+ *\'data\' *=>/', $line)) {
                 $translatedErrors[] = "Response hanya berisi 'data'. Periksa apakah response juga menyertakan 'status' dan 'message'.";
             }
 
@@ -626,12 +616,17 @@ class RestApiController extends Controller
             $structuredMessages = [];
             $errorChunks = array_chunk($translatedErrors, 1); // 1 error per test
             foreach ($testTitles as $index => $title) {
-                $structuredMessages[] = [
-                    'title' => $title['title'] ?? 'Judul tidak tersedia',
-                    'errors' => $errorChunks[$index] ?? ["Test sukses"],
-                ];
+                $errors = $errorChunks[$index] ?? [];
+                if (!empty($errors)) { // Hanya tambahkan jika ada error
+                    $structuredMessages[] = [
+                        'title' => $title['title'] ?? 'Judul tidak tersedia',
+                        'errors' => $errors,
+                    ];
+                }
             }
-            $result['message'] = $structuredMessages;
+            if (!empty($structuredMessages)) {
+                $result['message'] = $structuredMessages;
+            }
         }
 
         // Cegah penimpaan message array jika sudah disusun sebelumnya
@@ -642,10 +637,9 @@ class RestApiController extends Controller
         } elseif (preg_match('/^OK\s+\(\d+\stests?,\s+\d+\sassertions\)/m', $output)) {
             $result['message'] = "Semua pengujian berhasil.";
         } elseif (empty($result['message'])) {
-            $result['message'] = "Pengujian gagal, tetapi tidak ditemukan detail error yang jelas.";
+            $result['message'] = "Pengujian gagal, pastikan seluruh modul sebelumnya (Preparation, POST method, GET method, PUT method, Delete method) telah dikerjakan dengan benar.";
         }
 
-        // dd($result);
         return $result;
     }
 }    

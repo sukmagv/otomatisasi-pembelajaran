@@ -13,11 +13,9 @@ class DbConnectTest extends \Codeception\Test\Unit
             return;
         }
 
-        // 🔍 Cek bahwa nama file db.php digunakan
         $this->assertArrayHasKey('includedDbFile', $GLOBALS, 'File DB yang digunakan tidak tercatat');
-        $includedPath = $GLOBALS['includedDbFile'];
-        $this->assertStringEndsWith('db.php', $includedPath, 'File yang digunakan bukan db.php');
-        $this->assertFileExists($includedPath, 'File db.php tidak ditemukan di path yang digunakan');
+        $this->assertStringEndsWith('db.php', $GLOBALS['includedDbFile'], 'File yang digunakan bukan db.php');
+        $this->assertFileExists($GLOBALS['includedDbFile'], 'File db.php tidak ditemukan');
 
         $this->assertInstanceOf(mysqli::class, $conn);
 

@@ -17,13 +17,27 @@ use Illuminate\Support\Facades\Storage;
 class TeacherController extends Controller
 {
     // Get all topics from database
+    // public function topics()
+    // {
+    //     $topics = Topic::all();
+    //     $topicsCount = count($topics);
+
+    //     return view('restapi.teacher.topic', [
+    //         'topics' => $topics,
+    //         'topicsCount' => $topicsCount,
+    //     ]);
+    // }
+
     public function index()
     {
         $topics = Topic::all();
         $topicsCount = count($topics);
         
         // Urutkan task berdasarkan topic_id
-        $tasks = Task::orderBy('topic_id')->get();
+        $tasks = Task::orderBy('topic_id')
+            ->with('topic')
+            ->get();
+            
         $tasksCount = count($tasks);
 
         return view('restapi.teacher.index', [
@@ -182,6 +196,8 @@ class TeacherController extends Controller
 
         $stats = $this->getSubmissionStats($submissionId, $userId, $taskId);
         $submissionPosition = $stats['position'];
+        $latestFeedback = $submission->feedbacks->sortByDesc('created_at')->first();
+        $testResult = $latestFeedback->test_result ?? 'No Test Result';
 
         $filesContent = [[
             'user_name'    => $submission->user->name ?? 'No Name',
@@ -190,8 +206,7 @@ class TeacherController extends Controller
             'topic_title'  => $submission->task->topic->title ?? 'No Topic',
             'topic_desc'   => $submission->task->topic->description ?? 'No Description',
             'code'         => $escapedCode,
-            'run_output'   => $submission->feedback->run_output ?? 'No Run Output',
-            'test_result'  => $submission->feedback->test_result ?? 'No Test Result',
+            'test_result'  => $testResult ?? 'No Test Result',
             'interval'     => $intervalData,
             'submission_position' => $submissionPosition,
             'created_at'   => $submission->created_at->format('Y-m-d H:i:s'),

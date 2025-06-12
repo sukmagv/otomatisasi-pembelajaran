@@ -168,9 +168,9 @@
                                 <li class="nav-item">
                                     <a class="nav-link active" id="learning-tab" data-toggle="tab" href="#learning">Learning Topic</a>
                                 </li>
-                                <!-- <li class="nav-item">
+                                <li class="nav-item">
                                     <a class="nav-link" id="finished-tab" data-toggle="tab" href="#finished">Topic Finished</a>
-                                </li> -->
+                                </li>
                             </ul>
 
                             <!-- TAB CONTENT -->
@@ -206,6 +206,33 @@
                                 <div class="tab-pane fade" id="finished">
                                     <h3>Topic Finished</h3>
                                     <p>This is the content for the Topic Finished.</p>
+                                    <div class="table-responsive">
+                                        <table id="topicsTable" class="table table-bordered">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>No</th>
+                                                    <th>Title</th>
+                                                    <th>Submitted Time</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($topicFinished as $index => $finished)
+                                                <tr>
+                                                    <td>{{ $index + 1 }}</td>
+                                                    <td>{{ $finished->title }}</td>
+                                                    <td>
+                                                        @if($finished->updated_at)
+                                                            {{ $finished->updated_at->format('Y-m-d H:i:s') }}
+                                                        @elseif($finished->created_at)
+                                                            {{ $finished->created_at->format('Y-m-d H:i:s') }}
+                                                        @else
+                                                            Not Submitted
+                                                        @endif
+                                                </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -256,12 +283,26 @@
 
                                 <b>Tools : </b><br>
                                 <div class="row">
-                                    <div class="col-md-6 text-center text-sm">
+                                    <div class="col-md-4 text-center text-sm p-2">
                                         <a href="https://code.visualstudio.com/" target="_blank">
                                             <img style="width: 90px; height: 80px;" src="{{asset("./images/php/vscode.png")}}" alt="">
                                         </a>
                                         <br>
                                         VISUAL STUDIO CODE
+                                    </div>
+                                    <div class="col-md-4 text-center text-sm p-2">
+                                        <a href="https://code.visualstudio.com/" target="_blank">
+                                            <img style="width: 90px; height: 80px;" src="{{asset("./images/php/xampp.png")}}" alt="">
+                                        </a>
+                                        <br>
+                                        XAMPP
+                                    </div>
+                                    <div class="col-md-4 text-center text-sm p-2">
+                                        <a href="https://code.visualstudio.com/" target="_blank">
+                                            <img style="width: 90px; height: 80px;" src="{{asset("./images/php/postman.png")}}" alt="">
+                                        </a>
+                                        <br>
+                                        POSTMAN
                                     </div>
                                 </div>
                             </div>

@@ -60,4 +60,35 @@ class PostCest
             'message' => 'Data tidak lengkap'
         ]);
     }
+    
+    public function testFailToCreateUserWithIncompleteData_MissingName(ApiTester $I)
+    {
+        $I->wantTo("Test API with missing name and successful DB connection");
+        $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
+        $I->sendPost($this->path, [
+            'email' => 'codeceptuser@gmail.com'
+            // no name
+        ]);
+        $I->seeHttpHeader('Content-Type', 'application/json');
+        $I->seeResponseCodeIs(400);
+        $I->seeResponseIsJson();
+        $I->seeResponseContainsJson([
+            'status' => 'error',
+            'message' => 'Data tidak lengkap'
+        ]);
+    }
+
+    public function testFailToCreateUserWithNoData(ApiTester $I)
+    {
+        $I->wantTo("Test API with no data and successful DB connection");
+        $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
+        $I->sendPost($this->path, []); // No data
+        $I->seeHttpHeader('Content-Type', 'application/json');
+        $I->seeResponseCodeIs(400);
+        $I->seeResponseIsJson();
+        $I->seeResponseContainsJson([
+            'status' => 'error',
+            'message' => 'Data tidak lengkap'
+        ]);
+    }
 }

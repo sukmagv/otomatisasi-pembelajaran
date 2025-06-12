@@ -4,9 +4,20 @@ use Tests\Support\FunctionalTester;
 
 class FormCest
 {
+    private string $username;
+
+    public function _before(FunctionalTester $I)
+    {
+        $jsonPath = codecept_root_dir() . 'tests/test-config.json';
+            $json = file_get_contents($jsonPath);
+            $data = json_decode($json, true);
+
+            $this->username = $data['username'] ?? 'default_user';
+    }
+
     public function seeCrudFormElements(FunctionalTester $I)
     {
-        $I->amOnPage('/run-test/sukma');
+        $I->amOnPage('/run-test/' . $this->username);
         $I->seeInTitle('Manajemen Pengguna');
         $I->see('Manajemen Pengguna');
 
@@ -20,8 +31,13 @@ class FormCest
         $I->see('Simpan', 'button[type="submit"]');
 
         // GET
-        $I->see('Lihat data JSON:');
-        $I->seeElement('a', ['href' => 'get.php']);
+        $I->see('Cari User (GET)', 'h2');
+        $I->seeElement('form[action="get.php"]');
+        $I->see('Lihat semua data:');
+        $I->seeElement('a[href="get.php"]');
+        $I->see('ID:', 'label');
+        $I->seeElement('input[name="id"][type="number"][required]');
+        $I->see('Cari', 'button[type="submit"]');
 
         // PUT
         $I->see('Edit User (PUT)', 'h2');
@@ -44,7 +60,7 @@ class FormCest
 
     public function submitPostForm(FunctionalTester $I)
     {
-        $I->amOnPage('/run-test/sukma');
+        $I->amOnPage('/run-test/' . $this->username);
         $I->submitForm('form[action="post.php"]', [
             'name' => 'Test User',
             'email' => 'test@example.com'
@@ -70,7 +86,7 @@ class FormCest
         $user = json_decode(file_get_contents(codecept_output_dir() . 'test_user_id.json'), true);
         $id = $user['id'];
 
-        $I->amOnPage('/run-test/sukma');
+        $I->amOnPage('/run-test/' . $this->username);
         $I->submitForm('form[action="put.php"]', [
             'id' => $id,
             'name' => 'Updated Name',
@@ -85,7 +101,7 @@ class FormCest
         $user = json_decode(file_get_contents(codecept_output_dir() . 'test_user_id.json'), true);
         $id = $user['id'];
 
-        $I->amOnPage('/run-test/sukma');
+        $I->amOnPage('/run-test/' . $this->username);
         $I->submitForm('form[action="delete.php"]', [
             'id' => $id
         ]);

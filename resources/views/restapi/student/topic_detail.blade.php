@@ -276,10 +276,16 @@
                 </div>
             @endforeach
         </div>
-        <!-- Link Run HTML di luar ul, paling bawah -->
+
+        @if (session('alert'))
+    <script>
+        alert("{{ session('alert') }}");
+    </script>
+@endif
+
         <div class="mt-3 mb-3" style="padding-left: 20px; padding-bottom: 50px;">
             <a href="{{ route('restapi_run_test_index', ['username' => $user->name]) }}" class="text text-list" target="_blank">
-                <b>Run HTML</b>
+                <b>Run Form</b>
             </a>
         </div>   
     </div>
@@ -592,6 +598,11 @@
                 })
                 .then(data => {
                     messageDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                    setTimeout(() => {
+                        const alert = messageDiv.querySelector('.alert');
+                        if (alert) alert.remove();
+                    }, 3000);
+
                     if (data.test_result) {
                         messageDiv.innerHTML += `<pre>${data.test_result}</pre>`;
                     }
@@ -645,6 +656,11 @@
                 })
                 .then(data => {
                     messageDiv.innerHTML = `<div class="alert alert-success">Verification successful!</div>`;
+
+                    setTimeout(() => {
+                        const alert = messageDiv.querySelector('.alert');
+                        if (alert) alert.remove();
+                    }, 3000);
 
                     if (data.testResult && hasValidFeedback(data.testResult)) {
                         const feedbackDiv = document.querySelector('#feedbackSection') || createFeedbackSection();
