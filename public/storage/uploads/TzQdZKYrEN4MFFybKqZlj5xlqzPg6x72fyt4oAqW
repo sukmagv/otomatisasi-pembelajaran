@@ -1,0 +1,34 @@
+<?php
+header("Content-Type: application/json");
+require "data.php";
+
+$data = getData();
+$input = json_decode(file_get_contents("php://input"), true);
+
+if (!isset($input['id']) || !isset($input['name'])) {
+    http_response_code(400);
+    echo json_encode([
+        "status" => 400,
+        "error" => "Invalid Input"
+    ]);
+    exit;
+}
+
+if (isset($data[$input['id']])) {
+    http_response_code(400);
+    echo json_encode([
+        "status" => 400,
+        "error" => "Item Already Exists"
+    ]);
+    exit;
+}
+
+$data[$input['id']] = $input;
+saveData($data);
+
+http_response_code(201);
+echo json_encode([
+    "status" => 201,
+    "message" => "Item Created",
+    "produk" => $data[$input['id']]
+]);
