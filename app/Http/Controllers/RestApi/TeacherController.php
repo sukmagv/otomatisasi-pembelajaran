@@ -4,6 +4,7 @@ namespace App\Http\Controllers\RestApi;
 
 use Carbon\Carbon;
 use Barryvdh\DomPDF\PDF;
+use Carbon\CarbonInterface;
 use App\Models\RestApi\Task;
 use Illuminate\Http\Request;
 use App\Models\RestApi\Topic;
@@ -70,12 +71,13 @@ class TeacherController extends Controller
 
         $tasks = Task::all()->groupBy('topic_id');
 
+        // Ambil task aktif berdasarkan ID
+        $activeTask = $result->tasks->firstWhere('id', $task_id);
+
         // Search file in tasks table by ID topic
-        $taskWithFile = $result->tasks->firstWhere('file_path', '!=', null);
+        $taskWithFile = ($activeTask && $activeTask->file_path) ? $activeTask : null;
 
         $pdf_reader = $taskWithFile ? 1 : 0;
-
-        $activeTask = $tasks[$topic_id]->firstWhere('id', $task_id) ?? null;
 
         // Get submission data by user ID and task ID
         $submissions = Submission::where('task_id', $task_id)
@@ -112,7 +114,7 @@ class TeacherController extends Controller
         Task::create([
             'topic_id' => $request->topic_id,
             'title' => $request->title,
-            'flag' => $request->flag,
+            // 'flag' => $request->flag,
             'file_path' => $filePath ?? null,
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
@@ -125,7 +127,7 @@ class TeacherController extends Controller
     public function updateTask(Request $request)
     {
         // Cari task berdasarkan topic_id
-        $task = Task::where('topic_id', $request->topic_id)->first();
+        $task = Task::find($request->id);
 
         if (!$task) {
             return back()->with('error', 'Task not found!');
@@ -220,38 +222,35 @@ class TeacherController extends Controller
 
     public function getSubmitIntervalForSubmission(Submission $currentSubmission)
     {
-        // Ambil feedback terkait current submission, ambil waktu created_at feedback
-        $currentFeedback = $currentSubmission->feedbacks()->latest()->first();
+        $feedbacks = $currentSubmission->feedbacks()->orderBy('created_at')->get();
 
-        if (!$currentFeedback) {
-            // Jika current submission belum punya feedback, return null
-            return null;
+        if ($feedbacks->isEmpty()) {
+            // Tidak ada feedback sama sekali
+            $from = Carbon::parse($currentSubmission->started_at);
+            $to = Carbon::parse($currentSubmission->created_at);
+        } elseif ($feedbacks->count() === 1) {
+            // Hanya satu feedback
+            $firstFeedback = $feedbacks->first();
+            $from = Carbon::parse($currentSubmission->started_at);
+            $to = $firstFeedback->created_at;
+        } else {
+            // Lebih dari satu feedback
+            $lastFeedback = $feedbacks->last();
+            $from = Carbon::parse($currentSubmission->updated_at);
+            $to = $lastFeedback->created_at;
         }
 
-        // Cari feedback sebelumnya untuk user dan task yang sama, dengan waktu feedback sebelum current feedback
-        $previousFeedback = Feedback::whereHas('submission', function ($q) use ($currentSubmission) {
-                $q->where('user_id', $currentSubmission->user_id)
-                ->where('task_id', $currentSubmission->task_id);
-            })
-            ->where('created_at', '<', $currentFeedback->created_at)
-            ->orderByDesc('created_at')
-            ->first();
-
-        if (!$previousFeedback) {
-            return null;
-        }
-
-        // Hitung interval antara previous feedback dan current feedback
-        $intervalReadable = $previousFeedback->created_at->diffForHumans($currentFeedback->created_at, [
+        $intervalReadable = $from->diffForHumans($to, [
             'parts' => 3,
             'short' => true,
+            'syntax' => CarbonInterface::DIFF_ABSOLUTE,
         ]);
 
-        $intervalInSeconds = $previousFeedback->created_at->diffInSeconds($currentFeedback->created_at);
+        $intervalInSeconds = $from->diffInSeconds($to);
 
         return [
-            'from' => $previousFeedback->created_at->toDateTimeString(),
-            'to' => $currentFeedback->created_at->toDateTimeString(),
+            'from' => $from->toDateTimeString(),
+            'to' => $to->toDateTimeString(),
             'interval_readable' => $intervalReadable,
             'interval_seconds' => $intervalInSeconds,
         ];

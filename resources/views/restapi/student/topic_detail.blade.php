@@ -210,8 +210,8 @@
             </p>
         </div>  
         <div style="margin-bottom: 10px;">
-            <strong>Waktu Tersisa:</strong>
-            <span id="countdown" style="color: red; font-weight: bold;">Memuat...</span>
+            <strong>Time Remaining:</strong>
+            <span id="countdown" style="color: red; font-weight: bold;">Loading...</span>
         </div>
       
 
@@ -377,53 +377,39 @@
                     <div id="verifyMessage" class="mt-3"></div>
 
                     @php
-                        // Pastikan $testResult dalam bentuk array
-                        if (is_array($testResult)) {
-                            $feedbackData = $testResult;
-                        } elseif (is_string($testResult)) {
-                            $decoded = json_decode($testResult, true);
-                            $feedbackData = is_array($decoded) ? $decoded : [];
-                        } else {
-                            $feedbackData = [];
-                        }
-
-                        // Siapkan $errorLines hanya jika ada, supaya tidak tampil "baris ke--"
-                        $errorLines = '-';
-                        if (isset($feedbackData['error_lines'])) {
-                            $lines = $feedbackData['error_lines'];
-                            if (is_array($lines)) {
-                                $errorLines = implode(', ', $lines);
-                            } elseif (is_string($lines) || is_numeric($lines)) {
-                                $errorLines = $lines;
-                            }
-                        }
-
-                        // Cek apakah feedback seharusnya ditampilkan
-                        $hasFeedback = !empty($feedbackData['version']) 
-                                    || !empty($feedbackData['duration']) 
-                                    || !empty($feedbackData['memory']) 
-                                    || !empty($feedbackData['message']) 
-                                    || !empty($feedbackData['error_lines']);
-
-                        // Tentukan apakah message adalah array baru (array of objects)
-                        $isMessageArray = isset($feedbackData['message']) && is_array($feedbackData['message']);
+                        $feedback = is_array($testResult) ? $testResult : [];
+                        $hasFeedback = !empty($feedback['tool']) 
+                            || !empty($feedback['version']) 
+                            || !empty($feedback['duration']) 
+                            || !empty($feedback['memory']) 
+                            || !empty($feedback['message']) 
+                            || !empty($feedback['error_lines']);
                     @endphp
 
                     @if($hasFeedback)
-                        <div id="feedbackSection" class="mt-3" style="border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
-                            <h5><b>Feedback:</b></h5>
+                        @php
+                            $errorLines = '-';
+                            if (!empty($feedback['error_lines'])) {
+                                $errorLines = is_array($feedback['error_lines']) 
+                                    ? implode(', ', $feedback['error_lines']) 
+                                    : $feedback['error_lines'];
+                            }
+                            $isMessageArray = isset($feedback['message']) && is_array($feedback['message']);
+                        @endphp
 
-                            <p><strong>Versi Codeception:</strong> {{ $feedbackData['version'] ?? '-' }}</p>
-                            <p><strong>Durasi:</strong> {{ $feedbackData['duration'] ?? '-' }}</p>
-                            <p><strong>Memory:</strong> {{ $feedbackData['memory'] ?? '-' }}</p>
-                            @if(!empty($feedbackData['error_lines']))
+                        <div id="feedbackSection" class="mt-3" style="border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+                            <h5><b>Feedback (Codeception):</b></h5>
+                            <p><strong>Tool:</strong> {{ $feedback['tool'] ?? '-' }}</p>
+                            <p><strong>Version:</strong> {{ $feedback['version'] ?? '-' }}</p>
+                            <p><strong>Duration:</strong> {{ $feedback['duration'] ?? '-' }} (ms)</p>
+                            <p><strong>Memory:</strong> {{ $feedback['memory'] ?? '-' }}</p>
+                            @if($errorLines !== '-')
                                 <p><strong>Error:</strong> baris ke-{{ $errorLines }}</p>
                             @endif
-
-                            <p><strong>Pesan:</strong></p>
+                            <p><strong>Message:</strong></p>
                             <div style="text-align: justify; margin-bottom: 20px;">
                                 @if($isMessageArray)
-                                    @foreach($feedbackData['message'] as $msg)
+                                    @foreach($feedback['message'] as $msg)
                                         {{ $msg['title'] ?? 'Judul tidak tersedia' }}<br>
                                         <ul class="text-base">
                                             @foreach($msg['errors'] ?? [] as $err)
@@ -432,24 +418,12 @@
                                         </ul>
                                     @endforeach
                                 @else
-                                    {!! nl2br(e(ltrim($feedbackData['message'] ?? '-'))) !!}
+                                    {!! nl2br(e(ltrim($feedback['message'] ?? '-'))) !!}
                                 @endif
                             </div>
                         </div>
                     @endif
 
-                    {{-- @if (!empty($runOutput))
-                        @php
-                            $result = ['output' => $runOutput];
-                        @endphp
-
-                        <div class="my-3" style="border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
-                            @if (!empty($result['output']))
-                                <strong>Output (JSON):</strong>
-                                <pre>{{ json_encode($result['output'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
-                            @endif
-                        </div>
-                    @endif --}}
                 </div>
             </div>
         </div>
@@ -551,9 +525,9 @@
             const remaining = Math.floor((endTime - now) / 1000);
 
             if (remaining <= 0) {
-                document.getElementById('countdown').innerText = "Waktu habis!";
+                document.getElementById('countdown').innerText = "Time Out!";
                 uploadBtn.disabled = true;
-                uploadBtn.innerText = "Waktu habis";
+                uploadBtn.innerText = "Time Out";
             } else {
                 const hours = Math.floor(remaining / 3600);
                 const minutes = Math.floor((remaining % 3600) / 60);
@@ -574,6 +548,7 @@
             const uploadedFileLink = document.getElementById("uploadedFileLink");
             const verifyForm = document.getElementById("verifyForm");
 
+            if (uploadForm) {
             uploadForm.addEventListener("submit", function (e) {
                 e.preventDefault();
 
@@ -598,10 +573,10 @@
                 })
                 .then(data => {
                     messageDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
-                    setTimeout(() => {
-                        const alert = messageDiv.querySelector('.alert');
-                        if (alert) alert.remove();
-                    }, 3000);
+                    // setTimeout(() => {
+                    //     const alert = messageDiv.querySelector('.alert');
+                    //     if (alert) alert.remove();
+                    // }, 3000);
 
                     if (data.test_result) {
                         messageDiv.innerHTML += `<pre>${data.test_result}</pre>`;
@@ -624,114 +599,125 @@
                     console.error(error);
                 });
             });
+        }
 
-            verifyForm.addEventListener("submit", function (e) {
-                e.preventDefault();
+            if (verifyForm) {
+    verifyForm.addEventListener("submit", function (e) {
+        e.preventDefault();
 
-                // Sembunyikan feedback saat user klik Verify agar feedback hilang
-                const feedbackDiv = document.getElementById('feedbackSection');
-                if (feedbackDiv) {
-                    feedbackDiv.style.display = 'none';
+        // Sembunyikan feedback saat user klik Verify
+        const feedbackDiv = document.getElementById('feedbackSection');
+        if (feedbackDiv) {
+            feedbackDiv.style.display = 'none';
+        }
+
+        const formData = new FormData(verifyForm);
+        const messageDiv = document.getElementById("verifyMessage");
+        messageDiv.innerHTML = 'Verifying...';
+
+        fetch(verifyForm.action, {
+            method: "POST",
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(async response => {
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Verification error');
+            }
+            return response.json();
+        })
+        .then(data => {
+            messageDiv.innerHTML = `<div class="alert alert-success">Verification successful!</div>`;
+
+            let feedbackData = null;
+            // Prioritaskan Codeception, kalau kosong pakai PHPUnit
+            if (data.testResult && hasValidFeedback(data.testResult.codeception)) {
+                feedbackData = data.testResult.codeception;
+            } else if (data.testResult && hasValidFeedback(data.testResult.phpunit)) {
+                feedbackData = data.testResult.phpunit;
+            }
+
+            if (feedbackData) {
+                let feedbackDiv = document.querySelector('#feedbackSection');
+                if (!feedbackDiv) {
+                    feedbackDiv = createFeedbackSection();
                 }
 
-                const formData = new FormData(verifyForm);
-                const messageDiv = document.getElementById("verifyMessage");
-                messageDiv.innerHTML = 'Verifying...';
+                const errorLines = Array.isArray(feedbackData.error_lines)
+                    ? feedbackData.error_lines.join(', ')
+                    : (feedbackData.error_lines || '-');
 
-                fetch(verifyForm.action, {
-                    method: "POST",
-                    body: formData,
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(async response => {
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.message || 'Verification error');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    messageDiv.innerHTML = `<div class="alert alert-success">Verification successful!</div>`;
-
-                    setTimeout(() => {
-                        const alert = messageDiv.querySelector('.alert');
-                        if (alert) alert.remove();
-                    }, 3000);
-
-                    if (data.testResult && hasValidFeedback(data.testResult)) {
-                        const feedbackDiv = document.querySelector('#feedbackSection') || createFeedbackSection();
-                        const feedbackData = data.testResult;
-
-                        const errorLines = Array.isArray(feedbackData.error_lines)
-                            ? feedbackData.error_lines.join(', ')
-                            : (feedbackData.error_lines || '-');
-
-                        let messageHTML = '';
-
-                        if (Array.isArray(feedbackData.message)) {
-                            // Format baru: message array dengan title dan errors
-                            feedbackData.message.forEach(msg => {
-                                messageHTML += `<b>${msg.title || 'Judul tidak tersedia'}</b><br><ul>`;
-                                if (Array.isArray(msg.errors)) {
-                                    msg.errors.forEach(err => {
-                                        messageHTML += `<li>${err}</li>`;
-                                    });
-                                } else {
-                                    messageHTML += `<li>${msg.errors || '-'}</li>`;
-                                }
-                                messageHTML += '</ul>';
+                let messageHTML = '';
+                if (Array.isArray(feedbackData.message)) {
+                    feedbackData.message.forEach(msg => {
+                        messageHTML += `<b>${msg.title || 'Judul tidak tersedia'}</b><br><ul>`;
+                        if (Array.isArray(msg.errors)) {
+                            msg.errors.forEach(err => {
+                                messageHTML += `<li>${err}</li>`;
                             });
                         } else {
-                            // Format lama: message string biasa
-                            messageHTML = feedbackData.message || '-';
+                            messageHTML += `<li>${msg.errors || '-'}</li>`;
                         }
-
-                        let errorLineHTML = (errorLines !== '-' && errorLines !== '') 
-                            ? `<p><strong>Error:</strong> baris ke-${errorLines}</p>` 
-                            : '';
-
-                        feedbackDiv.innerHTML = `
-                            <h5><b>Feedback:</b></h5>
-                            <p><strong>Versi Codeception:</strong> ${feedbackData.version || '-'}</p>
-                            <p><strong>Durasi:</strong> ${feedbackData.duration || '-'}</p>
-                            <p><strong>Memory:</strong> ${feedbackData.memory || '-'}</p>
-                            ${errorLineHTML}
-                            <p><strong>Pesan:</strong></p>
-                            <div style="text-align: justify; margin-bottom: 20px;">
-                                ${messageHTML}
-                            </div>
-                        `;
-
-                        feedbackDiv.style.display = 'block';
-                    } else {
-                        const feedbackDiv = document.querySelector('#feedbackSection');
-                        if (feedbackDiv) feedbackDiv.style.display = 'none';
-                    }
-                })
-                .catch(error => {
-                    messageDiv.innerHTML = `<div class="alert alert-danger">Verification failed: ${error.message}</div>`;
-                    console.error(error);
-                });
-
-                function hasValidFeedback(feedbackData) {
-                    return feedbackData.version || feedbackData.duration || feedbackData.memory || feedbackData.message || (feedbackData.error_lines && feedbackData.error_lines.length);
+                        messageHTML += '</ul>';
+                    });
+                } else {
+                    messageHTML = feedbackData.message || '-';
                 }
-            });
 
-            function createFeedbackSection() {
-                const feedbackDiv = document.createElement('div');
-                feedbackDiv.id = 'feedbackSection';
-                feedbackDiv.classList.add('mt-3');
-                feedbackDiv.style.border = '1px solid #ccc';
-                feedbackDiv.style.padding = '10px';
-                feedbackDiv.style.borderRadius = '5px';
-                verifyForm.parentNode.insertBefore(feedbackDiv, verifyForm.nextSibling);
-                return feedbackDiv;
+                let errorLineHTML = (errorLines !== '-' && errorLines !== '') 
+                    ? `<p><strong>Error:</strong> baris ke-${errorLines}</p>` 
+                    : '';
+
+                feedbackDiv.innerHTML = `
+                    <h5><b>Feedback (${feedbackData.tool || 'Unknown'}):</b></h5>
+                    <p><strong>Tool:</strong> ${feedbackData.tool || '-'}</p>
+                    <p><strong>Version:</strong> ${feedbackData.version || '-'}</p>
+                    <p><strong>Duration:</strong> ${feedbackData.duration || '-'} (ms)</p>
+                    <p><strong>Memory:</strong> ${feedbackData.memory || '-'}</p>
+                    ${errorLineHTML}
+                    <p><strong>Message:</strong></p>
+                    <div style="text-align: justify; margin-bottom: 20px;">
+                        ${messageHTML}
+                    </div>
+                `;
+
+                feedbackDiv.style.display = 'block';
+            } else {
+                const feedbackDiv = document.querySelector('#feedbackSection');
+                if (feedbackDiv) feedbackDiv.style.display = 'none';
             }
+        })
+        .catch(error => {
+            messageDiv.innerHTML = `<div class="alert alert-danger">Verification failed: ${error.message}</div>`;
+            console.error(error);
+        });
+
+        function hasValidFeedback(feedbackData) {
+            return feedbackData && (
+                feedbackData.tool || feedbackData.version || feedbackData.duration ||
+                feedbackData.memory || feedbackData.message ||
+                (feedbackData.error_lines && feedbackData.error_lines.length)
+            );
+        }
+    });
+}
+
+function createFeedbackSection() {
+    const feedbackDiv = document.createElement('div');
+    feedbackDiv.id = 'feedbackSection';
+    feedbackDiv.classList.add('mt-3');
+    feedbackDiv.style.border = '1px solid #ccc';
+    feedbackDiv.style.padding = '10px';
+    feedbackDiv.style.borderRadius = '5px';
+    verifyForm.insertAdjacentElement('afterend', feedbackDiv);
+    return feedbackDiv;
+}
+
         });
     </script>
 </body>

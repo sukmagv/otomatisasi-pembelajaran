@@ -28,7 +28,6 @@ suites:
         actor: UnitTester
         modules:
             enabled:
-                - Laravel
                 - Asserts
     Functional:
         actor: FunctionalTester

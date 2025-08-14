@@ -81,6 +81,19 @@ class FormCest
         ]));
     }
 
+    public function submitGetForm(FunctionalTester $I)
+    {
+        $user = json_decode(file_get_contents(codecept_output_dir() . 'test_user_id.json'), true);
+        $id = $user['id'];
+
+        $I->amOnPage('/run-test/' . $this->username);
+        $I->submitForm('form[action="get.php"]', [
+            'id' => $id
+        ]);
+        $I->seeInCurrentUrl('get.php');
+        $I->see('success');
+    }
+
     public function submitPutForm(FunctionalTester $I)
     {
         $user = json_decode(file_get_contents(codecept_output_dir() . 'test_user_id.json'), true);

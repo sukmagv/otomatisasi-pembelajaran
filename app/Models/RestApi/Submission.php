@@ -17,6 +17,7 @@ class Submission extends Model
         'task_id',
         'submit_path',
         'submit_comment',
+        'started_at',
         'created_at',
         'updated_at',
     ];

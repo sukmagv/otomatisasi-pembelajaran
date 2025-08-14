@@ -85,6 +85,10 @@
         transform: translateY(0);
         }
 
+        #addTaskFlagWrapper,
+        #editTaskFlagWrapper {
+            display: none;
+        }
     </style>
 
     <title>Tab Example</title>
@@ -264,7 +268,13 @@
                                                     <td>{{ $index + 1 }}</td>
                                                     <td>{{ $task->topic_id }}</td>
                                                     <td>{{ $task->title }}</td>
-                                                    <td>{{ $task->flag == 1 ? 'Yes' : 'No' }}</td>
+                                                    <td>
+                                                        @if($task->id >= 1 && $task->id <= 7)
+                                                            {{ $task->flag == 1 ? 'Yes' : 'No' }}
+                                                        @else
+                                                            No
+                                                        @endif
+                                                    </td>
                                                     <td class="text-center">
                                                         <!-- Tombol Open -->
                                                         <button class="btn btn-primary btn-sm" onclick="openTask('{{ $task->id }}', '{{ $task->topic_id }}')">
@@ -320,11 +330,13 @@
                             </select>
                             <label for="addTaskTitle" class="form-label">Title</label>
                             <input type="text" class="form-control" id="addTaskTitle" name="title" required>
-                            <label for="addTaskFlag" class="form-label">Need Submission?</label>
-                            <select class="form-control" id="addTaskFlag" name="flag" required>
-                                <option value="1">Yes</option>
-                                <option value="0">No</option>
-                            </select>
+                            <div class="mb-3" id="addTaskFlagWrapper" display="none">
+                                <label for="addTaskFlag" class="form-label">Need Submission?</label>
+                                <select class="form-control" id="addTaskFlag" name="flag">
+                                    <option value="1">Yes</option>
+                                    <option value="0">No</option>
+                                </select>
+                            </div>
                             <!-- Input File -->
                             <label for="addTaskFile" class="form-label">Upload PDF</label>
                             <input type="file" class="form-control" id="addTaskFile" name="file_path" accept=".pdf" required>
@@ -366,11 +378,13 @@
                                 $otherTasks = $tasks->where('id', '!=', $currentTaskId);
                             @endphp
                             @if(isset($task))
+                            <div class="mb-3" id="editTaskFlagWrapper">
                                 <label for="editTaskFlag" class="form-label">Need Submission?</label>
-                                <select class="form-control" id="editTaskFlag" name="flag" required>
+                                <select class="form-control" id="editTaskFlag" name="flag">
                                     <option value="1" {{ $task->flag == 1 ? 'selected' : '' }}>Yes</option>
                                     <option value="0" {{ $task->flag == 0 ? 'selected' : '' }}>No</option>
                                 </select>
+                            </div>
                             @else
                                 <p>Tidak ada task untuk ditampilkan.</p>
                             @endif
@@ -506,43 +520,73 @@
         });
     </script>
     <script>
-        // Function untuk menampilkan isi Task
+        // Daftar topic_id yang menampilkan "Need Submission"
+        const allowedTopicIds = [1, 2, 3, 4, 5, 6, 7];
+
+        // Fungsi untuk redirect ke halaman task
         function openTask(id, topic_id) {
             window.location.href = "{{ route('restapi_open_task') }}?id=" + encodeURIComponent(topic_id) + "&task_id=" + encodeURIComponent(id);
         }
 
-        // Function untuk menampilkan modal Add Task
+        // Fungsi untuk membuka modal Add Task
         function addTask() {
             $('#addTaskTopic').val('');
             $('#addTaskTitle').val('');
-            $('#addTaskType').val('');
             $('#addTaskFlag').val('');
             $('#addTaskFile').val('');
+            $('#addTaskFlagWrapper').hide(); // Sembunyikan field flag saat pertama kali dibuka
             $('#addTaskModal').modal('show');
         }
-    
-        // Function untuk menampilkan modal Edit Task
+
         function editTask(id, topic_id, title, flag, file_path) {
-            $('#editTaskId').val(id);
-            $('#editTaskTopic').val(topic_id);
-            $('#editTaskTitle').val(title);
-            $('#editTaskFlag').val(flag);
-            $('#editTaskFile').val('');
-            
-            // Kosongkan input file agar tidak memaksa pengguna mengunggah ulang
-            $('#editTaskFile').val('');
+        $('#editTaskId').val(id);
+        $('#editTaskTopic').val(topic_id);
+        $('#editTaskTitle').val(title);
+        $('#editTaskFile').val('');
+        $('#editTaskFlag').val(flag);
 
-            // Ambil nama file asli dari path
-            let fileName = file_path ? file_path.split('/').pop() : 'Belum ada file';
-
-            // Tampilkan nama file di placeholder
-            $('#fileNameDisplay').text(fileName);
-
-            // Simpan nama file lama di hidden input (akan dikirim ke backend)
-            $('#oldTaskFilePath').val(file_path);
-
-            $('#editTaskModal').modal('show');
+        // Tampilkan atau sembunyikan flag hanya jika task.id antara 1-7
+        if ([1, 2, 3, 4, 5, 6, 7].includes(parseInt(id))) {
+            $('#editTaskFlagWrapper').show();
+        } else {
+            $('#editTaskFlagWrapper').hide();
         }
+
+        // Tampilkan nama file
+        let fileName = file_path ? file_path.split('/').pop() : 'Belum ada file';
+        $('#fileNameDisplay').text(fileName);
+        $('#oldTaskFilePath').val(file_path);
+
+        $('#editTaskModal').modal('show');
+    }
+
+        // Fungsi untuk menampilkan/menyembunyikan flag
+        function toggleFlagVisibility(topicId, wrapperId) {
+            const wrapper = document.getElementById(wrapperId);
+            if (allowedTopicIds.includes(parseInt(topicId))) {
+                wrapper.style.display = 'block';
+            } else {
+                wrapper.style.display = 'none';
+            }
+        }
+
+        // Event saat user memilih topik di modal ADD
+        document.addEventListener('DOMContentLoaded', function () {
+            // const addTopicSelect = document.getElementById('addTaskTopic');
+            const editTopicSelect = document.getElementById('editTaskTopic');
+
+            // if (addTopicSelect) {
+            //     addTopicSelect.addEventListener('change', function () {
+            //         toggleFlagVisibility(this.value, 'addTaskFlagWrapper');
+            //     });
+            // }
+
+            if (editTopicSelect) {
+                editTopicSelect.addEventListener('change', function () {
+                    toggleFlagVisibility(this.value, 'editTaskFlagWrapper');
+                });
+            }
+        });
     
         // Function untuk menampilkan modal Delete Task
         function deleteTask(id, title) {

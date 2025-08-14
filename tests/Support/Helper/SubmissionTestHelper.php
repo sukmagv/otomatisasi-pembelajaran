@@ -2,96 +2,72 @@
 
 namespace Tests\Support\Helper;
 
-use Codeception\Module;
+use Tests\Support\ApiTester;
 
-class SubmissionTestHelper extends Module
+class SubmissionTestHelper extends \Codeception\Module
 {
-    /**
-     * Generate override file untuk auto_prepend_file.
-     *
-     * @param array $data Data yang ingin diinject.
-     * @param string $fileName Nama file override (contoh: 'override_get_id.php')
-     * @param string $variable Nama variabel yang ingin diisi (contoh: '$id', '$data')
-     * @return string Path file override yang dihasilkan
-     */
-    
-    public static function generateAutoPrependFile(array|string $data, string $fileName = 'override.php', string $variable = '$data'): string
+    public function resolveUserId(ApiTester $I): int
     {
-        $code  = "<?php\n";
+        // Ambil path dari config jika valid dan merupakan get.php
+        $configPath = codecept_root_dir() . 'tests/test-config.json';
+        $config = json_decode(file_get_contents($configPath), true);
+        $rawPath = $config['testFile'] ?? '';
+        $normalizedPath = str_replace('\\', '/', $rawPath);
+        $getPath = basename($normalizedPath) === 'get.php' ? $normalizedPath : '/get.php';
 
-        $variables = array_map('trim', explode(',', $variable));
+        $filePath = codecept_output_dir() . 'test_user_id.json';
+        $id = null;
 
-        if (count($variables) === 1) {
-            $varName = trim($variables[0], '$');
-            // Jika data array dan keynya sama dengan variabel, ambil nilainya
-            if (is_array($data) && array_key_exists($varName, $data)) {
-                $value = $data[$varName];
-            } else {
-                $value = $data;
+        // 1. Cek file
+        if (file_exists($filePath)) {
+            $user = json_decode(file_get_contents($filePath), true);
+            if (!empty($user['id'])) {
+                $id = $user['id'];
             }
-            $code .= "\$GLOBALS['{$varName}'] = " . var_export($value, true) . ";\n";
-        } else {
-            foreach ($variables as $i => $var) {
-                $key = array_keys($data)[$i] ?? null;
-                if ($key !== null) {
-                    $varName = trim($var, '$');
-                    $code .= "\$GLOBALS['{$varName}'] = " . var_export($data[$key], true) . ";\n";
+        }
+
+        // 2. Cek by name/email
+        if (!$id) {
+            $I->haveHttpHeader('Accept', 'application/json');
+            $I->sendGET($getPath, [
+                'name' => 'codecept user',
+                'email' => 'codeceptuser@gmail.com',
+            ]);
+            $I->seeResponseCodeIs(200);
+            $response = json_decode($I->grabResponse(), true);
+
+            if (!empty($response['data'])) {
+                if (isset($response['data']['id'])) {
+                    $id = $response['data']['id'];
+                } elseif (is_array($response['data']) && isset($response['data'][0]['id'])) {
+                    $randomUser = $response['data'][array_rand($response['data'])];
+                    $id = $randomUser['id'];
                 }
             }
         }
 
-        $configFile = codecept_root_dir() . 'tests/test-config.json';
-        $config = json_decode(file_get_contents($configFile), true);
-        $targetDir = dirname($config['testFile'] ?? '') ?: __DIR__;
+        // 3. Cek last user
+        if (!$id) {
+            $I->haveHttpHeader('Accept', 'application/json');
+            $I->sendGET($getPath);
+            $I->seeResponseCodeIs(200);
+            $response = json_decode($I->grabResponse(), true);
 
-        $overridePath = $targetDir . DIRECTORY_SEPARATOR . $fileName;
-        file_put_contents($overridePath, $code);
-
-        return $overridePath;
-    }
-
-    /**
-     * Hapus override file berdasarkan nama (default: override.php)
-     *
-     * @param string $fileName
-     */
-    public static function cleanupOverrideFile(string $fileName = 'override.php'): void
-    {
-        $configFile = codecept_root_dir() . 'tests/test-config.json';
-        $config = json_decode(file_get_contents($configFile), true);
-        $targetDir = dirname($config['testFile'] ?? '') ?: __DIR__;
-        $overridePath = $targetDir . DIRECTORY_SEPARATOR . $fileName;
-
-        if (file_exists($overridePath)) {
-            unlink($overridePath);
-        }
-    }
-
-    public function deleteUserByUsername(string $username): void
-    {
-        $conn = new \mysqli('127.0.0.1', 'root', '', 'test_db');
-        if ($conn->connect_error) {
-            throw new \Exception("Database connection failed: " . $conn->connect_error);
+            if (!empty($response['data']) && is_array($response['data'])) {
+                $lastUser = end($response['data']);
+                if (isset($lastUser['id'])) {
+                    $id = $lastUser['id'];
+                }
+            }
         }
 
-        $stmt = $conn->prepare("DELETE FROM users WHERE username = ?");
-        $stmt->bind_param("s", $username);
-        $stmt->execute();
-        $stmt->close();
-        $conn->close();
-    }
-
-    public function cleanupInsertedUser(string $username, string $email): void
-    {
-        $conn = new \mysqli('127.0.0.1', 'root', '', 'test_db');
-        if ($conn->connect_error) {
-            throw new \Exception("Database connection failed: " . $conn->connect_error);
+        if (!$id) {
+            $I->fail("Gagal mendapatkan user ID.");
         }
 
-        $stmt = $conn->prepare("DELETE FROM users WHERE username = ? OR email = ?");
-        $stmt->bind_param("ss", $username, $email);
-        $stmt->execute();
-        $stmt->close();
-        $conn->close();
+        file_put_contents($filePath, json_encode(['id' => $id], JSON_PRETTY_PRINT));
+        return $id;
     }
+
 }
+

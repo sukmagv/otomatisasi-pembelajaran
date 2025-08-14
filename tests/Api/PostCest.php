@@ -5,6 +5,7 @@ use Tests\Support\ApiTester;
 class PostCest
 {
     protected $path;
+    protected $username;
     
     public function _before(ApiTester $I)
     {
@@ -13,6 +14,7 @@ class PostCest
         $data = json_decode($json, true);
 
         $rawPath = $data['testFile'];
+        $this->username = $data['username'] ?? 'default_user';
         $this->path = str_replace('\\', '/', $rawPath);
 
         // Validasi: hanya izinkan file post.php
@@ -29,7 +31,7 @@ class PostCest
             'name' => 'codecept user',
             'email' => 'codeceptuser@gmail.com'
         ]);
-        
+
         $I->seeHttpHeader('Content-Type', 'application/json');
         $I->seeResponseCodeIs(201);
         $I->seeResponseIsJson();
@@ -44,7 +46,7 @@ class PostCest
         ]));
     }
 
-    public function testFailToCreateUserWithIncompleteData(ApiTester $I)
+    public function testFailToCreateUserWithoutEmail(ApiTester $I)
     {
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->sendPost($this->path, [
@@ -61,9 +63,8 @@ class PostCest
         ]);
     }
     
-    public function testFailToCreateUserWithIncompleteData_MissingName(ApiTester $I)
+    public function testFailToCreateUserWithoutName(ApiTester $I)
     {
-        $I->wantTo("Test API with missing name and successful DB connection");
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->sendPost($this->path, [
             'email' => 'codeceptuser@gmail.com'
@@ -80,7 +81,6 @@ class PostCest
 
     public function testFailToCreateUserWithNoData(ApiTester $I)
     {
-        $I->wantTo("Test API with no data and successful DB connection");
         $I->haveHttpHeader('Content-Type', 'application/x-www-form-urlencoded');
         $I->sendPost($this->path, []); // No data
         $I->seeHttpHeader('Content-Type', 'application/json');

@@ -16,7 +16,7 @@ if (basename($mainFile) !== 'db.php') {
 }
 
 // Path file absolut (misal dari base_path/public)
-$filePath = base_path('public/' . $mainFile);
+$filePath = realpath(__DIR__ . '/../public/' . $mainFile);
 
 if (!file_exists($filePath)) {
     throw new Exception("File db.php tidak ditemukan: " . $filePath);

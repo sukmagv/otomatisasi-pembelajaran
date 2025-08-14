@@ -41,11 +41,11 @@
         <p><strong>Waktu pengumpulan:</strong> {{ $file['created_at'] }}</p>
         <p><strong>Deskripsi topik:</strong> {{ $file['topic_desc'] }}</p>
         @if($file['interval'])
-            <p><strong>Rentang waktu dengan pengumpulan sebelumnya:</strong> 
-                {{ str_replace(' before', '', $file['interval']['interval_readable']) }}
+            <p><strong>Rentang waktu pengerjaan:</strong> 
+                {{ $file['interval']['interval_readable'] }}
             </p>
         @else
-            <p><strong>Rentang waktu dengan pengumpulan sebelumnya:</strong>-</p>
+            <p><strong>Rentang waktu pengerjaan:</strong> -</p>
         @endif
         <p><strong>Pengumpulan ke-{{ $file['submission_position'] }}</strong></p>
         <h4>Submitted Code:</h4>
