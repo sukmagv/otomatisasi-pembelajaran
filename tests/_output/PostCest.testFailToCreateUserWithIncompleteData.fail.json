@@ -1,0 +1,9 @@
+<br />
+<b>Warning</b>:  mysqli::__construct(): php_network_getaddresses: getaddrinfo for invalidhost failed: No such host is known.  in <b>C:\laragon\www\iclop\storage\app\public\restapi\sukma\db.php</b> on line <b>7</b><br />
+<br />
+<b>Fatal error</b>:  Uncaught mysqli_sql_exception: php_network_getaddresses: getaddrinfo for invalidhost failed: No such host is known.  in C:\laragon\www\iclop\storage\app\public\restapi\sukma\db.php:7
+Stack trace:
+#0 C:\laragon\www\iclop\storage\app\public\restapi\sukma\db.php(7): mysqli-&gt;__construct('invalidhost', 'root', '', 'test_db')
+#1 C:\laragon\www\iclop\storage\app\public\restapi\sukma\post.php(3): require('C:\\laragon\\www\\...')
+#2 {main}
+  thrown in <b>C:\laragon\www\iclop\storage\app\public\restapi\sukma\db.php</b> on line <b>7</b><br />
