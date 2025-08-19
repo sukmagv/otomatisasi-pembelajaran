@@ -757,7 +757,7 @@ class RestApiController extends Controller
                 $result['message'] = "Test Success.";
             }
         } elseif (empty($result['message'])) {
-            $result['message'] = "Test Failed, make sure Form HTML and all the previous modules (Preparation, POST method, GET method, PUT method, Delete method) already successful.";
+            $result['message'] = "Test failed. Make sure there are no typos in the code and that the code has been written completely.";
         }
 
         return $result;
